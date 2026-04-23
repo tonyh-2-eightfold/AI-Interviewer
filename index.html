@@ -128,20 +128,23 @@
     position: absolute;
     inset: 56px 0 110px 0;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: auto auto;
+    justify-content: center;
     align-items: center;
     padding: 0 clamp(40px, 8vw, 120px);
     gap: clamp(40px, 8vw, 100px);
     transition: padding 0.7s cubic-bezier(.2,.7,.2,1),
                 gap 0.7s cubic-bezier(.2,.7,.2,1);
   }
-  /* When screenshare is active: avatar + transcript stacked-and-centered (left), claude-panel (right) */
+  /* When screenshare is active: avatar+transcript (col 1) + claude-panel (col 2), both centered */
   body.sharing .center {
-    grid-template-columns: 440px 1fr;
+    grid-template-columns: 440px auto;
     grid-template-rows: auto auto;
+    justify-content: center;
+    align-content: center;
     align-items: center;
-    padding: 0 0 0 clamp(80px, 10vw, 180px);
-    gap: 60px 0;
+    padding: 0 clamp(20px, 3vw, 60px);
+    gap: 60px clamp(40px, 5vw, 80px);
   }
   body.sharing .avatar-col {
     grid-column: 1; grid-row: 1;
@@ -376,7 +379,7 @@
     position: absolute;
     top: 50%;
     right: clamp(16px, 2vw, 32px);
-    transform: translate(24px, -50%) scale(0.96);
+    transform: translateY(12px) scale(0.96);
     width: clamp(520px, 50vw, 620px);
     height: clamp(520px, 72vh, 640px);
     background: #FFFFFF;
@@ -392,9 +395,15 @@
     z-index: 4;
   }
   body.sharing .claude-panel {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
     opacity: 1;
-    transform: translate(0, -50%) scale(1);
+    transform: none;
     pointer-events: auto;
+    top: auto;
+    right: auto;
   }
 
   /* macOS traffic lights */
@@ -698,6 +707,100 @@
   }
   .start-btn:hover { background: #2a2a2a; }
   .start-btn:active { transform: translateY(1px); }
+
+  /* ── Responsive ──────────────────────────────── */
+  @media (max-width: 960px) {
+    /* Default view: 2-col → single centered column */
+    .center {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto;
+      justify-items: center;
+      align-items: center;
+      padding: 0 clamp(16px, 5vw, 48px);
+      gap: clamp(20px, 4vw, 40px);
+    }
+
+    .avatar-col { justify-content: center !important; }
+
+    .avatar-wrap {
+      width: clamp(200px, 42vw, 320px);
+      height: clamp(200px, 42vw, 320px);
+    }
+    .avatar {
+      width: clamp(155px, 33vw, 250px);
+      height: clamp(155px, 33vw, 250px);
+    }
+
+    .transcript-viewport {
+      width: min(380px, 100%);
+      height: 210px;
+    }
+    .transcript-track { font-size: 16px; }
+
+    /* Sharing: stack all 3 in single column, allow internal scroll */
+    body.sharing .center {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto 1fr;
+      padding: clamp(8px, 2vw, 24px);
+      gap: clamp(12px, 2vh, 20px) 0;
+      overflow-y: auto;
+      align-items: start;
+      justify-items: center;
+    }
+
+    body.sharing .avatar-col {
+      grid-column: 1; grid-row: 1;
+      width: 100%;
+      justify-content: center;
+      align-self: auto;
+    }
+
+    body.sharing .transcript-viewport {
+      grid-column: 1; grid-row: 2;
+      justify-self: center;
+      width: min(360px, 100%);
+      height: 130px;
+      text-align: left;
+    }
+
+    body.sharing .avatar-wrap { width: 160px; height: 160px; }
+    body.sharing .avatar { width: 120px; height: 120px; }
+    body.sharing .ring.r2 { inset: -14px; }
+
+    /* Claude panel: pull into grid flow when sharing */
+    body.sharing .claude-panel {
+      position: static;
+      width: 100%;
+      max-width: 100%;
+      height: clamp(320px, 48vh, 500px);
+      transform: none;
+      top: auto; right: auto;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .usage-group span:first-child { display: none; }
+
+    .avatar-wrap {
+      width: clamp(160px, 50vw, 220px);
+      height: clamp(160px, 50vw, 220px);
+    }
+    .avatar {
+      width: clamp(125px, 39vw, 170px);
+      height: clamp(125px, 39vw, 170px);
+    }
+
+    .transcript-viewport { height: 180px; }
+    .transcript-track { font-size: 15px; }
+
+    .toolbar { gap: 4px; padding: 5px; }
+    .end-btn { padding: 7px 14px 7px 10px; font-size: 12.5px; }
+    .yes-btn { padding: 7px 12px 7px 9px; font-size: 12.5px; }
+
+    body.sharing .claude-panel {
+      height: clamp(280px, 44vh, 360px);
+    }
+  }
 </style>
 </head>
 <body>
@@ -1112,9 +1215,8 @@
     }, { once: true });
   })();
 
-  // End check-in just logs for now
   document.getElementById('endBtn').addEventListener('click', () => {
-    console.log('End check-in clicked');
+    window.location.reload();
   });
 
   // Screenshare engagement — slides avatar, fades Claude chat view in,

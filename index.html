@@ -660,6 +660,74 @@
     .avatar { width: 170px; height: 170px; }
     .transcript { max-width: 520px; }
   }
+  /* ── Scenario selector ──────────────────────── */
+  .scenario-overlay {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(10, 10, 12, 0.78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 10000;
+    transition: opacity .35s ease;
+  }
+  .scenario-overlay.hidden { opacity: 0; pointer-events: none; }
+  .scenario-card {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 18px;
+    padding: 28px 28px 20px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.28);
+    width: 360px;
+  }
+  .scenario-card h2 {
+    margin: 0 0 4px;
+    font-size: 18px; font-weight: 700;
+    color: #111; letter-spacing: -0.01em;
+  }
+  .scenario-card > p {
+    margin: 0 0 18px;
+    font-size: 13px; color: #777; line-height: 1.5;
+  }
+  .scenario-list { display: flex; flex-direction: column; gap: 8px; }
+  .scenario-btn {
+    display: flex; align-items: center; gap: 14px;
+    width: 100%;
+    padding: 14px 16px;
+    background: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .scenario-btn:hover { background: #f3f0ff; border-color: #c4b5f0; transform: translateY(-1px); }
+  .scenario-btn:active { transform: translateY(0); }
+  .scenario-icon {
+    width: 38px; height: 38px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #ede9f8;
+    border-radius: 10px;
+    color: #6a3dc4;
+  }
+  .scenario-icon .material-symbols-outlined { font-size: 20px; }
+  .scenario-info { flex: 1; min-width: 0; }
+  .scenario-role {
+    font-size: 14px; font-weight: 600; color: #111;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .scenario-desc { font-size: 12px; color: #888; margin-top: 2px; }
+  .new-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    background: #e8f5e9; color: #2e7d32;
+    border-radius: 999px;
+    font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .scenario-chevron { color: #bbb; flex-shrink: 0; }
+  .scenario-chevron .material-symbols-outlined { font-size: 20px; }
+
   /* Start overlay — needed so first audio playback has a user gesture */
   .start-overlay {
     position: fixed; inset: 0;
@@ -805,8 +873,34 @@
 </head>
 <body>
 
+<!-- Scenario selector -->
+<div class="scenario-overlay" id="scenarioOverlay">
+  <div class="scenario-card">
+    <h2>Choose a scenario</h2>
+    <p>Select the role you'd like to explore.</p>
+    <div class="scenario-list">
+      <button class="scenario-btn" id="scenarioEngineer">
+        <div class="scenario-icon"><span class="material-symbols-outlined">code</span></div>
+        <div class="scenario-info">
+          <div class="scenario-role">Lead Engineer</div>
+          <div class="scenario-desc">Weekly AI-assisted code review check-in</div>
+        </div>
+        <div class="scenario-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </button>
+      <button class="scenario-btn" id="scenarioCsm">
+        <div class="scenario-icon"><span class="material-symbols-outlined">support_agent</span></div>
+        <div class="scenario-info">
+          <div class="scenario-role">CSM <span class="new-badge">New</span></div>
+          <div class="scenario-desc">Customer success AI usage review</div>
+        </div>
+        <div class="scenario-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Start overlay: ensures first audio playback has a user gesture -->
-<div class="start-overlay" id="startOverlay">
+<div class="start-overlay hidden" id="startOverlay">
   <div class="start-card">
     <h2>Ready for your check-in?</h2>
     <p>Your coach will walk you through a quick review of this week's AI-assisted work.</p>
@@ -1121,19 +1215,81 @@
 
   })();
 
+  // ── Scenario configs ──────────────────────────────────────────────────────
+  const SCENARIOS = {
+    engineer: {
+      script: [
+        "Good start. Here's where I'd focus next.",
+        "You spend about five hours a week reviewing code — a lot of that is catching the same routine issues you've seen a hundred times.",
+        "Claude can pre-read those for you. Let me show you — here's a review I ran on your last PR this morning.",
+        "See the Risky flag? That's the one you actually want to stare at. The small style note and the routine files, you can just trust.",
+        "Do this on every PR and you get a full hour back on Tuesdays. Want me to set it up on your repo?"
+      ],
+      panelMeta: 'PR review · Sonnet 4.6',
+      attachIcon: 'commit',
+      attachLabel: 'feat/payment-retry-logic',
+      attachMeta: '#4821 · 8 files',
+      userText: 'Review this PR — what do I actually need to look at?',
+      claudeIntro: "Looked at all 8 files. Here's what's worth your attention:",
+      items: [
+        { tag: 'tag-risk', label: 'Risky', html: '<b>api/payments/retry.ts</b> — new exponential backoff. Confirm idempotency key is set before the retry loop or you\'ll double-charge on timeout.' },
+        { tag: 'tag-nit',  label: 'FYI',   html: '<b>lib/logger.ts</b> — level changed from <code>info</code> to <code>debug</code>. Probably intentional, but worth a word with Priya.' },
+        { tag: 'tag-skim', label: 'Skim',  html: '5 test files + 1 doc update. Coverage holds at 87%. Safe to approve.' }
+      ],
+      actions: [
+        { icon: 'open_in_new', label: 'Open in GitHub' },
+        { icon: 'done_all',    label: 'Approve with notes' }
+      ]
+    },
+    csm: {
+      script: [
+        "Hey — let's look at your week. Claude assisted on 31 tasks across your 12 active accounts.",
+        "You're getting strong mileage on post-call summaries — nine this week, averaging under 4 minutes each.",
+        "The one I want to flag is Vantage. One point four million ARR, renewal in 38 days, and their CFO hasn't joined a call since February.",
+        "That usage drop in their analytics module is your strongest talking point — frame it as a roadmap question, not a red flag.",
+        "Get Sarah Chen into a business case review before May 9. That's the move that closes this renewal."
+      ],
+      panelMeta: 'Account brief · Sonnet 4.6',
+      attachIcon: 'description',
+      attachLabel: 'Vantage-Q2-Brief.pdf',
+      attachMeta: '47 days to renewal',
+      userText: "Here's the account brief and usage data for this week. What should I prioritize before the renewal call?",
+      claudeIntro: "Three things to nail before the Vantage renewal call:",
+      items: [
+        { tag: 'tag-risk', label: 'Risk',   html: '<b>Usage drop</b> — Analytics module down 34% since the Jan release. Surface this proactively; frame it as a roadmap question, not a red flag.' },
+        { tag: 'tag-nit',  label: 'Action', html: '<b>Exec gap</b> — Sarah Chen (CFO) hasn\'t joined a call since Feb 3. She signs the renewal. Get her into a business case review by May 9.' },
+        { tag: 'tag-skim', label: 'Intel',  html: '<b>Competition</b> — Vantage evaluated Gainsight in Q1. Have your workflow integration differentiators ready for the renewal call.' }
+      ],
+      actions: [
+        { icon: 'edit',            label: 'Draft exec email' },
+        { icon: 'space_dashboard', label: 'Build QBR outline' }
+      ]
+    }
+  };
+  window.SCENARIO = SCENARIOS.engineer;
+
+  function applyScenarioToPanel(s) {
+    document.querySelector('.chat-meta').textContent = s.panelMeta;
+    const chip = document.querySelector('.attach-chip');
+    chip.querySelector('.material-symbols-outlined').textContent = s.attachIcon;
+    chip.querySelector('.attach-name').textContent = s.attachLabel;
+    chip.querySelector('.attach-meta').textContent = s.attachMeta;
+    document.querySelector('.msg-text').textContent = s.userText;
+    document.getElementById('replyList').innerHTML = s.items.map((it, i) =>
+      `<li data-step="${i+1}"><span class="tag ${it.tag}">${it.label}</span><div>${it.html}</div></li>`
+    ).join('');
+    document.getElementById('replyActions').innerHTML = s.actions.map(a =>
+      `<button class="reply-action"><span class="material-symbols-outlined">${a.icon}</span>${a.label}</button>`
+    ).join('');
+  }
+
   // Animated scrolling transcript — oldest on top, new sentences push up from the bottom.
   // Each new line types in word-by-word; once it completes, older lines age (dimmer) and
   // a fresh line slides in at the bottom.
   (() => {
     const track = document.getElementById('track');
 
-    const SCRIPT = [
-      "Good start. Here's where I'd focus next.",
-      "You spend about five hours a week reviewing code — a lot of that is catching the same routine issues you've seen a hundred times.",
-      "Claude can pre-read those for you. Let me show you — here's a review I ran on your last PR this morning.",
-      "See the Risky flag? That's the one you actually want to stare at. The small style note and the routine files, you can just trust.",
-      "Do this on every PR and you get a full hour back on Tuesdays. Want me to set it up on your repo?"
-    ];
+    const SCRIPT = [...window.SCENARIO.script];
 
     const MAX_VISIBLE = 4;     // number of lines kept on-screen
     const OLDEST_AGE  = 3;     // matches .age-3
@@ -1205,10 +1361,26 @@
       setTimeout(type, 220);
     };
 
-    // Wait for user to click Start before kicking off (autoplay policy requires a gesture).
+    // Scenario selector → set active scenario, then show start overlay
+    const scenarioOverlay = document.getElementById('scenarioOverlay');
     const startOverlay = document.getElementById('startOverlay');
+    function selectScenario(key) {
+      window.SCENARIO = SCENARIOS[key];
+      SCRIPT.length = 0;
+      window.SCENARIO.script.forEach(l => SCRIPT.push(l));
+      scenarioOverlay.classList.add('hidden');
+      setTimeout(() => {
+        scenarioOverlay.remove();
+        startOverlay.classList.remove('hidden');
+      }, 350);
+    }
+    document.getElementById('scenarioEngineer').addEventListener('click', () => selectScenario('engineer'));
+    document.getElementById('scenarioCsm').addEventListener('click', () => selectScenario('csm'));
+
+    // Wait for user to click Start before kicking off (autoplay policy requires a gesture).
     const startBtn = document.getElementById('startBtn');
     startBtn.addEventListener('click', () => {
+      applyScenarioToPanel(window.SCENARIO);
       startOverlay.classList.add('hidden');
       setTimeout(() => startOverlay.remove(), 400);
       appendNewLine();
@@ -1247,7 +1419,7 @@
       setTimeout(() => {
         msgClaude.setAttribute('aria-hidden', 'false');
         msgClaude.classList.add('in');
-        typeIntro("Looked at all 8 files. Here's what's worth your attention:", () => {
+        typeIntro(window.SCENARIO.claudeIntro, () => {
           // 3) Reveal the three list items staggered
           const items = list.querySelectorAll('li');
           items.forEach((li, i) => {

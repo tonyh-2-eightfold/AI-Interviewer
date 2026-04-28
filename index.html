@@ -895,6 +895,14 @@
         </div>
         <div class="scenario-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
       </button>
+      <button class="scenario-btn" id="scenarioWfr">
+        <div class="scenario-icon"><span class="material-symbols-outlined">analytics</span></div>
+        <div class="scenario-info">
+          <div class="scenario-role">CSM <span class="new-badge" style="background:#e3f2fd;color:#1565c0;">WFR</span></div>
+          <div class="scenario-desc">AI adoption calibration · data collection</div>
+        </div>
+        <div class="scenario-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </button>
     </div>
   </div>
 </div>
@@ -1243,11 +1251,11 @@
     },
     csm: {
       script: [
-        "Hey — let's look at your AI usage this week. Claude ran on 31 tasks across your 12 active accounts, up from 24 last week.",
-        "Post-call summaries are your strongest workflow — nine done, each under 4 minutes. That's about an hour back compared to writing them manually.",
-        "The tool I want to highlight is the account brief generator. You ran it on Vantage this morning — here's what it pulled together.",
-        "It caught the analytics usage drop and the CFO engagement gap automatically. That's a brief you'd have spent 45 minutes building by hand.",
-        "The one workflow you haven't turned on yet is executive outreach drafting. With Vantage's renewal in 38 days, that's the tool that gets the right people on a call. Want me to set it up?"
+        "Hey — let's look at your week. Claude assisted on 31 tasks across your 12 active accounts.",
+        "You're getting strong mileage on post-call summaries — nine this week, averaging under 4 minutes each.",
+        "The one I want to flag is Vantage. One point four million ARR, renewal in 38 days, and their CFO hasn't joined a call since February.",
+        "That usage drop in their analytics module is your strongest talking point — frame it as a roadmap question, not a red flag.",
+        "Get Sarah Chen into a business case review before May 9. That's the move that closes this renewal."
       ],
       panelMeta: 'Account brief · Sonnet 4.6',
       attachIcon: 'description',
@@ -1263,6 +1271,29 @@
       actions: [
         { icon: 'edit',            label: 'Draft exec email' },
         { icon: 'space_dashboard', label: 'Build QBR outline' }
+      ]
+    },
+    wfr: {
+      script: [
+        "Hey Sarah — you're at 31% AI adoption. That's the share of your augmentable work you're actively doing with AI today.",
+        "I'm looking at your top three augmentable tasks: QBR preparation, post-call follow-ups, and account research. Here's what the data shows.",
+        "The biggest gap is QBR prep. Your peers are averaging 64% AI-assisted, and your skills profile doesn't show AI signals there. That's 5 hours a week — at least 2 are reclaimable.",
+        "CSMs at your level who closed that gap started with AI-drafted exec summaries — not the full deck. Most get a solid first draft in under 20 minutes. That's where I'd suggest starting."
+      ],
+      panelMeta: 'WFR calibration · Sonnet 4.6',
+      attachIcon: 'person',
+      attachLabel: 'Sarah Culhane · Customer Success Manager',
+      attachMeta: 'Enterprise Accounts · est. adoption 31%',
+      userText: 'Run AI adoption calibration for Sarah. Pull task data from Career Hub and compare to peer benchmarks.',
+      claudeIntro: 'Calibration complete. Here\'s Sarah\'s readiness by task:',
+      items: [
+        { tag: 'tag-risk', label: 'Gap',     html: '<b>QBR Preparation</b> (5 hrs/wk) — No AI signals in skills profile. Peer benchmark: 64% AI-assisted. Highest-impact gap for this role.' },
+        { tag: 'tag-nit',  label: 'Partial', html: '<b>Post-call Follow-ups</b> (6 hrs/wk) — Partial AI signals in profile, below peer level. 45% of potential estimated from Career Hub data.' },
+        { tag: 'tag-skim', label: 'Strong',  html: '<b>Account Research</b> (3 hrs/wk) — Strong AI signals in profile, consistent with peer patterns. 72% of potential estimated.' }
+      ],
+      actions: [
+        { icon: 'save',           label: 'Save calibration (44%)' },
+        { icon: 'assignment_add', label: 'Add to dev plan' }
       ]
     }
   };
@@ -1376,6 +1407,7 @@
     }
     document.getElementById('scenarioEngineer').addEventListener('click', () => selectScenario('engineer'));
     document.getElementById('scenarioCsm').addEventListener('click', () => selectScenario('csm'));
+    document.getElementById('scenarioWfr').addEventListener('click', () => selectScenario('wfr'));
 
     // Wait for user to click Start before kicking off (autoplay policy requires a gesture).
     const startBtn = document.getElementById('startBtn');

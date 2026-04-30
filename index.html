@@ -4,8 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Career Coach — AI Usage Check-in</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,-25..200&display=swap" />
+<link href="https://fonts.cdnfonts.com/css/gilroy-free" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" />
+<script src="flows/voice_intake_sarah.js"></script>
 <style>
   :root {
     /* Deep purple canvas matches the existing coach-session visual DNA */
@@ -27,11 +28,67 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; height: 100%; }
   body {
-    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     color: var(--ink);
     background: #1c1334;
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Ambient blobs ──────────────────────────────────────────────────────── */
+  .blobs {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 2s ease, filter 3.2s ease;
+    z-index: 0;
+  }
+  body.speaking      .blobs { opacity: 0.22; }
+  body.user-speaking .blobs { opacity: 0.04; }
+
+  .blob {
+    position: absolute;
+    top: 50%; left: 50%;
+    border-radius: 50%;
+    mix-blend-mode: screen;
+  }
+  .blob.b1 {
+    width: 560px; height: 440px;
+    margin-left: -350px; margin-top: -280px;
+    background: radial-gradient(circle at 44% 42%, #d4a0ff 0%, #a855f7 50%, #7c3aed 80%, transparent 100%);
+    animation: bdrift1 13s ease-in-out infinite;
+  }
+  .blob.b2 {
+    width: 480px; height: 540px;
+    margin-left: -160px; margin-top: -260px;
+    background: radial-gradient(circle at 52% 48%, #fbb8ff 0%, #e879f9 50%, #c026d3 80%, transparent 100%);
+    animation: bdrift2 17s ease-in-out infinite;
+  }
+  .blob.b3 {
+    width: 520px; height: 400px;
+    margin-left: -300px; margin-top: -130px;
+    background: radial-gradient(circle at 50% 50%, #b0b3ff 0%, #6366f1 50%, #4338ca 80%, transparent 100%);
+    animation: bdrift3 11s ease-in-out infinite;
+  }
+  @keyframes bdrift1 {
+    0%   { transform: translate(  0px,   0px) scale(0.80); opacity: 0.40; filter: blur(95px); }
+    30%  { transform: translate( 30px, -20px) scale(1.45); opacity: 0.75; filter: blur(68px); }
+    65%  { transform: translate(-15px,  25px) scale(0.68); opacity: 0.18; filter: blur(118px); }
+    100% { transform: translate(  0px,   0px) scale(0.80); opacity: 0.40; filter: blur(95px); }
+  }
+  @keyframes bdrift2 {
+    0%   { transform: translate(  0px,   0px) scale(1.10); opacity: 0.30; filter: blur(88px); }
+    35%  { transform: translate(-25px,  20px) scale(0.70); opacity: 0.14; filter: blur(115px); }
+    70%  { transform: translate( 20px, -15px) scale(1.50); opacity: 0.72; filter: blur(62px); }
+    100% { transform: translate(  0px,   0px) scale(1.10); opacity: 0.30; filter: blur(88px); }
+  }
+  @keyframes bdrift3 {
+    0%   { transform: translate(  0px,   0px) scale(0.88); opacity: 0.45; filter: blur(92px); }
+    40%  { transform: translate( 20px,  15px) scale(1.38); opacity: 0.68; filter: blur(72px); }
+    75%  { transform: translate(-20px, -25px) scale(0.65); opacity: 0.12; filter: blur(120px); }
+    100% { transform: translate(  0px,   0px) scale(0.88); opacity: 0.45; filter: blur(92px); }
   }
 
   /* ---------- Page canvas ---------- */
@@ -60,104 +117,87 @@
   /* ---------- Top bar ---------- */
   .topbar {
     position: absolute; inset: 0 0 auto 0;
-    height: 56px;
+    height: 80px;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0 22px;
+    padding: 0 32px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
     z-index: 5;
   }
   .brand {
     display: inline-flex; align-items: center; gap: 8px;
-    font-size: 15px; font-weight: 600; letter-spacing: -0.005em;
+    font-size: 20px; font-weight: 600; letter-spacing: -0.005em;
     color: var(--ink);
   }
   .brand .spark {
-    width: 20px; height: 20px;
     display: inline-flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    color: var(--ink);
   }
-  .brand .spark svg { width: 20px; height: 20px; }
 
   .top-actions {
-    display: inline-flex; align-items: center; gap: 14px;
+    display: inline-flex; align-items: center; gap: 12px;
   }
   .usage-group {
-    display: inline-flex; align-items: center; gap: 10px;
-    font-size: 13px; font-weight: 500;
-    color: var(--ink-dim);
+    display: inline-flex; align-items: center; gap: 0;
+    font-size: 14px; font-weight: 500;
+    color: #B9F4E4;
+    opacity: 0;
+    pointer-events: none;
+    transition: gap 0.45s ease, opacity 0.3s ease;
   }
+  body:not(.not-started) .usage-group { gap: 10px; opacity: 1; pointer-events: auto; }
   .timer-pill {
     display: inline-flex; align-items: center;
-    padding: 3px 8px;
-    font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
-    background: var(--accent-green);
-    color: #0b2a1d;
-    border-radius: 5px;
+    padding: 2px 4px;
+    font-size: 14px; font-weight: 500;
+    background: #1B5143;
+    color: #8CE1CA;
+    border-radius: 4px;
     font-variant-numeric: tabular-nums;
+    max-width: 120px;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: max-width 0.45s ease, padding 0.45s ease, opacity 0.35s ease;
   }
+  body.not-started .timer-pill { max-width: 0; padding-left: 0; padding-right: 0; opacity: 0; }
   .icon-btn {
-    width: 32px; height: 32px;
+    width: 36px; height: 36px;
+    padding: 8px;
     display: inline-flex; align-items: center; justify-content: center;
     background: transparent;
     border: 0;
-    color: var(--ink-dim);
+    color: var(--ink);
+    opacity: 0.5;
     cursor: pointer;
-    border-radius: 8px;
-    transition: background 0.15s ease, color 0.15s ease;
+    border-radius: 50%;
+    transition: background 0.15s ease, opacity 0.15s ease;
   }
-  .icon-btn:hover { background: rgba(255,255,255,0.08); color: var(--ink); }
-  .icon-btn .material-symbols-outlined { font-size: 20px; }
-
-  /* Material Symbols — make ligatures resolve */
-  .material-symbols-outlined {
-    font-family: 'Material Symbols Outlined';
-    font-weight: normal;
-    font-style: normal;
-    line-height: 1;
-    letter-spacing: normal;
-    text-transform: none;
-    display: inline-block;
-    white-space: nowrap;
-    word-wrap: normal;
-    direction: ltr;
-    font-feature-settings: 'liga';
-    -webkit-font-feature-settings: 'liga';
-    -webkit-font-smoothing: antialiased;
-  }
+  .icon-btn:hover { background: rgba(255,255,255,0.08); opacity: 1; }
+  .icon-btn .mdi { font-size: 20px; }
 
   /* ---------- Main composition ---------- */
   .center {
     position: absolute;
-    inset: 56px 0 110px 0;
+    inset: 80px 0 110px 0;
     display: grid;
     grid-template-columns: auto auto;
     justify-content: center;
     align-items: center;
     padding: 0 clamp(40px, 8vw, 120px);
     gap: clamp(40px, 8vw, 100px);
+    opacity: 0;
+    pointer-events: none;
     transition: padding 0.7s cubic-bezier(.2,.7,.2,1),
-                gap 0.7s cubic-bezier(.2,.7,.2,1);
+                gap 0.7s cubic-bezier(.2,.7,.2,1),
+                opacity 0.55s ease;
   }
-  /* When screenshare is active: avatar+transcript (col 1) + claude-panel (col 2), both centered */
-  body.sharing .center {
-    grid-template-columns: 440px auto;
-    grid-template-rows: auto auto;
-    justify-content: center;
-    align-content: center;
-    align-items: center;
-    padding: 0 clamp(20px, 3vw, 60px);
-    gap: 60px clamp(40px, 5vw, 80px);
-  }
-  body.sharing .avatar-col {
-    grid-column: 1; grid-row: 1;
-    justify-content: center; align-self: end;
-    width: 100%;
-  }
-  body.sharing .transcript-viewport {
-    grid-column: 1; grid-row: 2;
-    justify-self: center; align-self: start;
-  }
-
+  body:not(.not-started) .center { opacity: 1; pointer-events: auto; }
+  body.avatar-transitioning .center { opacity: 0 !important; pointer-events: none !important; transition: none !important; }
   /* ---------- Avatar ---------- */
-  .avatar-col { position: relative; display: flex; align-items: center; justify-content: flex-start; }
+  .avatar-col {
+    position: relative; display: flex; align-items: center; justify-content: flex-start;
+    transition: transform 0.65s cubic-bezier(.2,.7,.2,1);
+  }
   body:not(.sharing) .avatar-col { justify-content: center; }
 
   .avatar-wrap {
@@ -165,47 +205,91 @@
     width: 360px; height: 360px;
     display: flex; align-items: center; justify-content: center;
     transition: width 0.7s cubic-bezier(.2,.7,.2,1),
-                height 0.7s cubic-bezier(.2,.7,.2,1);
+                height 0.7s cubic-bezier(.2,.7,.2,1),
+                opacity 0.6s ease;
   }
   body.sharing .avatar-wrap { width: 200px; height: 200px; }
-  /* Two faint concentric rings */
+  /* Radiating audio-wave rings — spawned by JS, play once and self-remove */
+  .rings-wrap {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .rings-wrap.paused .ring { animation-play-state: paused; }
   .ring {
     position: absolute;
     border-radius: 50%;
-    border: 1px solid var(--ring);
+    width: 78%; height: 78%;
+    top: 50%; left: 50%;
+    border: 1.5px solid rgba(245, 241, 250, 0.65);
+    opacity: 0;
+    pointer-events: none;
+    animation: radiate 3.2s linear forwards;
   }
-  .ring.r1 { inset: 0; border-color: var(--ring); }
-  .ring.r2 { inset: -36px; border-color: var(--ring-soft); }
-  /* subtle animated breathing on outer ring */
-  .ring.r2 {
-    animation: breathe 4.2s ease-in-out infinite;
-  }
-  @keyframes breathe {
-    0%,100% { transform: scale(1);   opacity: 0.9; }
-    50%     { transform: scale(1.035); opacity: 1; }
+  @keyframes radiate {
+    0%   { transform: translate(-50%, -50%) scale(1);    opacity: 0.7; }
+    100% { transform: translate(-50%, -50%) scale(1.78); opacity: 0; }
   }
 
-  .avatar {
-    width: 280px; height: 280px;
+  .avatar-border {
     border-radius: 50%;
-    background: #2a1a4a center/cover no-repeat;
-    box-shadow:
-      0 0 0 2px rgba(255,255,255,0.08) inset,
-      0 20px 60px rgba(0,0,0,0.45);
-    overflow: hidden;
+    padding: 4px;
+    background: conic-gradient(from 290deg, #4751AD 0%, #C262BF 50%, #4751AD 100%);
+    flex-shrink: 0;
     position: relative;
+    z-index: 1;
+    isolation: isolate;
     transition: width 0.7s cubic-bezier(.2,.7,.2,1),
                 height 0.7s cubic-bezier(.2,.7,.2,1);
   }
-  body.sharing .avatar { width: 150px; height: 150px; }
-  body.sharing .ring.r2 { inset: -20px; }
-  .avatar img {
-    width: 100%; height: 100%; object-fit: cover; display: block;
-    transform: scale(1.02);
+  .avatar {
+    width: 280px; height: 280px;
+    border-radius: 50%;
+    background: #2a1a4a;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+    overflow: hidden;
+    position: relative;
   }
+  .avatar::before {
+    content: '';
+    position: absolute;
+    inset: -20px;
+    background: url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAGKADAAQAAAABAAAAGAAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/8AAEQgAGAAYAwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC//EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+v/bAEMABAQEBAQEBgQEBgkGBgYJDAkJCQkMDwwMDAwMDxIPDw8PDw8SEhISEhISEhUVFRUVFRkZGRkZHBwcHBwcHBwcHP/bAEMBBAUFBwcHDAcHDB0UEBQdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHf/dAAQAAv/aAAwDAQACEQMRAD8A9P8AjLALjxRpQHHmSyDP1EYry3V7PW9N1/Rdai1LzNN1KYWwstu0eWxKBySfv7hu6dOK9K+Mt2lnrWhTHH+skIBOM7VjOPxxXAeIrLSo/Evhm4McFvZGYD7Q8mWLRjeAWIC/eG0d+a8ys3ztI9LDKLh73ZnOfFDSrWXR2S6EfX935hAAfsQf8O2a+cP+EfT+/af99/8A1q938bXcN6+uW19Mk1sHVrfe4wW6gJnofp6V4l9lsf8AnjH/AN9D/GsoPewO+l0f/9DrP2gZoLX+y7i6jSWMW918rjI3FYlBwfQnIr5R8Q67fa14csdDnC+TbyNMr87x5pBKemMjNfUH7S//ACDtM/64z/zhr5Il/wCPeP6R1tTpxknddTJ1JJIs+H5tHn0J7TUbiKJhdCF5H4IjGGUk4PJBYDjPFbP9h+Af+A1D/wB/D/8AGq8mH/INvf8Ar7h/9BeqNeJVSVSSSOvTm+SJ/9k=') center top / cover no-repeat;
+    filter: blur(20px);
+    z-index: 0;
+  }
+  .avatar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('images/john.png') center top / cover no-repeat;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 0;
+  }
+  .avatar.image-loaded::after { opacity: 1; }
+  body.sharing .avatar { width: 150px; height: 150px; }
+  .avatar video {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: center top;
+    transition: opacity 0.7s ease;
+    z-index: 2;
+  }
+  .avatar.video-loaded::after { opacity: 0; }
+  #coachVideo     { opacity: 0; }
+  #listeningVideo { opacity: 0; }
+  .avatar.video-loaded #coachVideo            { opacity: 1; }
+  body.agent-listening .avatar #coachVideo    { opacity: 0; }
+  body.agent-listening .avatar #listeningVideo { opacity: 1; }
+  body.speaking   .avatar #listeningVideo     { opacity: 0; }
+  body.mic-off    .avatar #listeningVideo     { opacity: 0; }
+  body.mic-off    .avatar #coachVideo         { opacity: 1; }
 
-  /* Speaker chip under the avatar */
-  .speaker-chip {
+  /* Speaker chip / listening chip */
+  .speaker-chip,
+  .listening-chip {
     position: absolute;
     left: 50%; bottom: -14px;
     transform: translateX(-50%);
@@ -218,6 +302,22 @@
     font-size: 13px; font-weight: 500;
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    white-space: nowrap;
+  }
+  body.speaking      .speaker-chip  { opacity: 1; }
+  body.user-speaking .listening-chip { opacity: 1; }
+
+  .listen-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #c084fc;
+    animation: listenPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes listenPulse {
+    0%, 100% { transform: scale(1);   opacity: 0.5; }
+    50%      { transform: scale(1.5); opacity: 1;   }
   }
   .bars {
     display: inline-flex; align-items: center; gap: 2px;
@@ -245,26 +345,29 @@
     width: 380px;
     height: 300px;
     overflow: hidden;
-    transition: opacity 0.5s ease, transform 0.7s cubic-bezier(.2,.7,.2,1);
+    opacity: 0;
+    margin-top: -60px;
+    transition: opacity 0.65s cubic-bezier(.2,.7,.2,1),
+                transform 0.65s cubic-bezier(.2,.7,.2,1);
     /* Soft fade at the top so old lines dissolve out as they scroll up */
     -webkit-mask-image: linear-gradient(to bottom,
       transparent 0%, rgba(0,0,0,0.25) 8%, #000 28%, #000 100%);
             mask-image: linear-gradient(to bottom,
       transparent 0%, rgba(0,0,0,0.25) 8%, #000 28%, #000 100%);
   }
-  /* When screenshare is on, the transcript sits centered-as-a-block BELOW the avatar, left-aligned text */
-  body.sharing .transcript-viewport {
-    width: 340px;
-    height: 180px;
-    font-size: 15px;
-    text-align: left;
-  }
+  body.speaking .transcript-viewport { opacity: 1; }
+
+  /* User turn — coach avatar pauses */
+  body.user-speaking .bars i { animation-play-state: paused; }
+  body.mic-off .bars i { animation-play-state: paused; }
+
   .transcript-track {
     position: absolute;
     left: 0; right: 0;
     bottom: 0;
+    min-height: 50%;
     display: flex; flex-direction: column; gap: 20px;
-    font-size: 18px;
+    font-size: 24px;
     line-height: 1.5;
     letter-spacing: -0.01em;
     transition: transform 0.9s cubic-bezier(.2,.7,.2,1);
@@ -283,23 +386,25 @@
     color: var(--ink-fade);
     transition: color 0.4s ease;
   }
-  .caret {
-    display: inline-block;
-    width: 2px; height: 1em;
-    background: #FFFFFF;
-    vertical-align: -2px;
-    margin-left: 2px;
-    animation: blink 1s steps(2, end) infinite;
+  .stream-char {
+    opacity: 0;
+    animation: streamIn 0.35s ease forwards;
   }
-  @keyframes blink { 50% { opacity: 0; } }
+  @keyframes streamIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
 
   /* ---------- Bottom toolbar ---------- */
   .toolbar {
     position: absolute;
     left: 50%; bottom: 28px;
-    transform: translateX(-50%);
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px;
+    transform: translateX(-50%) translateY(80px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.55s cubic-bezier(.2,.7,.2,1), opacity 0.45s ease;
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 8px;
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.10);
     border-radius: 999px;
@@ -308,17 +413,19 @@
     z-index: 5;
   }
   .tool-btn {
-    width: 36px; height: 36px;
+    width: 44px; height: 44px;
+    min-width: 44px;
     display: inline-flex; align-items: center; justify-content: center;
     background: #fff;
     color: #3a2a55;
     border: 0;
     border-radius: 999px;
     cursor: pointer;
-    transition: transform 0.15s ease, background 0.15s ease;
+    flex-shrink: 0;
+    transition: background 0.15s ease, color 0.15s ease;
   }
-  .tool-btn:hover { transform: translateY(-1px); background: #f6f2ff; }
-  .tool-btn .material-symbols-outlined { font-size: 18px; }
+  .tool-btn:hover { background: #e8e2f5; color: #1e1040; }
+  .tool-btn .mdi { font-size: 24px; }
 
   .voice-picker-unused {
     height: 32px;
@@ -339,315 +446,414 @@
   .divider {
     width: 1px; height: 20px;
     background: rgba(255,255,255,0.18);
-    margin: 0 2px;
+    margin: 0 4px;
   }
 
   .end-btn {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 8px 18px 8px 14px;
-    background: var(--danger);
-    color: var(--danger-ink);
+    background: #FFC6C6;
+    color: #6C2222;
     border: 0;
     border-radius: 999px;
     font-family: inherit;
-    font-size: 13.5px; font-weight: 600;
+    font-size: 16px; font-weight: 500;
     cursor: pointer;
-    transition: transform 0.15s ease, background 0.15s ease;
+    flex-shrink: 0;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease;
   }
-  .end-btn:hover { background: #f5c5c3; transform: translateY(-1px); }
-  .end-btn .material-symbols-outlined { font-size: 16px; }
+  .end-btn:hover { background: #f5aaaa; color: #4a1515; }
+  .end-btn .mdi { font-size: 24px; }
 
-  .yes-btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 8px 16px 8px 12px;
-    background: #FFFFFF;
-    color: #2a1a4a;
-    border: 0;
-    border-radius: 999px;
-    font-family: inherit;
-    font-size: 13.5px; font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.15s ease, background 0.15s ease, opacity 0.3s ease;
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.0), 0 6px 22px rgba(0,0,0,0.28);
-  }
-  .yes-btn:hover { transform: translateY(-1px); background: #f6f2ff; }
-  .yes-btn .material-symbols-outlined { font-size: 16px; color: #6a3dc4; }
-  body.sharing .yes-btn { opacity: 0; pointer-events: none; width: 0; padding: 0; margin: 0 -3px; overflow: hidden; }
-
-  /* ---------- Claude mock panel ---------- */
-  .claude-panel {
+  /* ── Start screen ────────────────────────────────────────────────────────── */
+  .start-screen {
     position: absolute;
-    top: 50%;
-    right: clamp(16px, 2vw, 32px);
-    transform: translateY(12px) scale(0.96);
-    width: clamp(520px, 50vw, 620px);
-    height: clamp(520px, 72vh, 640px);
-    background: #FFFFFF;
-    border-radius: 14px;
+    inset: 140px 0 0 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 28px;
+    z-index: 20;
+    pointer-events: auto;
+  }
+  body:not(.not-started) .start-screen { pointer-events: none; }
+
+  /* Start screen exit: slide down + fade */
+  .start-hero,
+  .start-footer {
+    transition: opacity 0.4s ease, transform 0.45s cubic-bezier(.4,0,1,1);
+  }
+  body:not(.not-started) .start-hero   { opacity: 0; transform: translateY(100px); }
+  body:not(.not-started) .start-footer { opacity: 0; transform: translateY(100px); }
+
+  /* Card container fades out */
+  body:not(.not-started) .start-card { opacity: 0; transform: translateY(100px); }
+
+  .start-hero { text-align: center; }
+  .start-title {
+    margin: 0 0 8px;
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .start-meta {
+    margin: 0;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .meta-label {
+    margin: 0;
+    font-weight: 600;
+    background: linear-gradient(90deg, #A3A8D6, #C1ACDB, #E0B0DF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .meta-dot { margin: 0; font-weight: 600; color: #BDC1C9; }
+  .meta-duration { margin: 0; font-weight: 600; color: #BDC1C9; }
+
+  .start-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    padding: 32px 40px 28px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 0.5px solid rgba(255,255,255,0.14);
+    border-radius: 24px;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
     box-shadow:
-      0 1px 0 rgba(255,255,255,0.3) inset,
-      0 30px 80px rgba(0,0,0,0.45),
-      0 10px 30px rgba(0,0,0,0.25);
+      inset 0 1px 0 rgba(255,255,255,0.18),
+      inset 0 -1px 0 rgba(0,0,0,0.25),
+      inset 1px 0 0 rgba(255,255,255,0.06),
+      inset -1px 0 0 rgba(0,0,0,0.15),
+      0 16px 48px rgba(0,0,0,0.25);
+    width: 640px;
+    max-width: calc(100vw - 48px);
+    margin-bottom: 40px;
+    transition: opacity 0.4s ease, transform 0.45s cubic-bezier(.4,0,1,1);
+  }
+
+  /* Avatar zone */
+  .start-avatar-zone {
+    position: relative;
+    width: 340px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .start-avatar-ring {
+    border-radius: 50%;
+    padding: 3px;
+    background: conic-gradient(from 290deg, #4751AD 0%, #C262BF 50%, #4751AD 100%);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .start-avatar-img {
+    width: 120px; height: 120px;
+    border-radius: 50%;
     overflow: hidden;
+    position: relative;
+    background: #2a1a4a;
+  }
+  .start-avatar-img::before {
+    content: '';
+    position: absolute;
+    inset: -10px;
+    background: url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAGKADAAQAAAABAAAAGAAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/8AAEQgAGAAYAwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC//EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+v/bAEMABAQEBAQEBgQEBgkGBgYJDAkJCQkMDwwMDAwMDxIPDw8PDw8SEhISEhISEhUVFRUVFRkZGRkZHBwcHBwcHBwcHP/bAEMBBAUFBwcHDAcHDB0UEBQdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHf/dAAQAAv/aAAwDAQACEQMRAD8A9P8AjLALjxRpQHHmSyDP1EYry3V7PW9N1/Rdai1LzNN1KYWwstu0eWxKBySfv7hu6dOK9K+Mt2lnrWhTHH+skIBOM7VjOPxxXAeIrLSo/Evhm4McFvZGYD7Q8mWLRjeAWIC/eG0d+a8ys3ztI9LDKLh73ZnOfFDSrWXR2S6EfX935hAAfsQf8O2a+cP+EfT+/af99/8A1q938bXcN6+uW19Mk1sHVrfe4wW6gJnofp6V4l9lsf8AnjH/AN9D/GsoPewO+l0f/9DrP2gZoLX+y7i6jSWMW918rjI3FYlBwfQnIr5R8Q67fa14csdDnC+TbyNMr87x5pBKemMjNfUH7S//ACDtM/64z/zhr5Il/wCPeP6R1tTpxknddTJ1JJIs+H5tHn0J7TUbiKJhdCF5H4IjGGUk4PJBYDjPFbP9h+Af+A1D/wB/D/8AGq8mH/INvf8Ar7h/9BeqNeJVSVSSSOvTm+SJ/9k=') center top / cover no-repeat;
+    filter: blur(20px);
+    z-index: 0;
+  }
+  .start-avatar-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('images/john.png') center top / cover no-repeat;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 1;
+  }
+  .avatar.image-loaded ~ * .start-avatar-img::after,
+  .start-avatar-img.image-loaded::after { opacity: 1; }
+
+  /* Speech bubbles */
+  .speech-bubble {
+    position: absolute;
+    padding: 7px 14px;
+    background: rgba(0, 0, 0, 0.05);
+    border: 0.5px solid rgba(255,255,255,0.14);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.18),
+      inset 0 -1px 0 rgba(0,0,0,0.25),
+      inset 1px 0 0 rgba(255,255,255,0.06),
+      inset -1px 0 0 rgba(0,0,0,0.15);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    font-size: 13px;
+    font-weight: 400;
+    color: #BEC2CA;
+    white-space: nowrap;
+    opacity: 0;
+    animation: bubbleFadeIn 0.5s ease forwards;
+  }
+  /* sb-1 = "Focused on you" */
+  .sb-1 { top: 12%; right: -6%; border-radius: 12px 12px 12px 0; animation-delay: 0.4s; }
+  /* sb-2 = "Ask anything" */
+  .sb-2 { top: 50%; left: -6%; border-radius: 12px 0 12px 12px; animation-delay: 0.65s; }
+  /* sb-3 = "Always private" */
+  .sb-3 { bottom: 10%; right: -2%; border-radius: 0 12px 12px 12px; animation-delay: 0.9s; }
+  @keyframes bubbleFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .sb-2 { animation-name: bubbleFadeIn; }
+  @keyframes bubbleFadeInDim {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 0.45; transform: translateY(0); }
+  }
+
+  /* Topics section */
+  .cover-label {
+    margin: 0 0 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #BDC1C9;
+    text-align: center;
+  }
+  .cover-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+  .cover-pill {
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: none;
+    background: rgba(255,255,255,0.05);
+    color: #BDC1C9;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .cover-pill:hover { background: rgba(255,255,255,0.10); color: #ffffff; }
+  .cover-pill.active {
+    background: rgba(255,255,255,0.125);
+    color: #ffffff;
+  }
+  .cover-desc {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 400;
+    color: #BEC2CA;
+    text-align: center;
+    min-height: 20px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.05);
+    border: 0.5px solid rgba(255,255,255,0.14);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.18),
+      inset 0 -1px 0 rgba(0,0,0,0.25),
+      inset 1px 0 0 rgba(255,255,255,0.06),
+      inset -1px 0 0 rgba(0,0,0,0.15);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    transition: opacity 0.2s ease;
+  }
+  .cover-time { color: #BEC2CA; font-weight: 500; }
+
+  /* Start actions */
+  .start-main-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px 10px 16px;
+    background: linear-gradient(135deg, #4751AD 0%, #C262BF 100%);
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: -0.01em;
+    margin: 20px 0;
+    transition: filter 0.15s ease, transform 0.15s ease;
+  }
+  .start-main-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .start-main-btn .mdi { font-size: 24px; }
+  .start-later-btn {
+    display: block;
+    background: none;
+    border: 0;
+    color: rgba(245,241,250,0.55);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 0;
+    transition: color 0.15s ease;
+  }
+  .start-later-btn:hover { color: var(--ink); }
+
+  /* Footer */
+  .start-footer {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #BDC1C9;
+    background: rgba(0, 0, 0, 0.05);
+  }
+  .eightfold-logo {
+    height: 22px;
+    vertical-align: middle;
+  }
+
+  body:not(.not-started) .toolbar { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
+  body.not-started .transcript-viewport { opacity: 0 !important; pointer-events: none; }
+
+
+  /* User caption line — Sarah's responses */
+  .t-line--user { color: rgba(245, 241, 250, 0.55) !important; font-style: italic; }
+
+  /* Captions off — both columns slide together via transform, no layout change */
+  body.captions-off .avatar-col      { transform: translateX(calc(190px + clamp(20px, 4vw, 50px))); }
+  body.captions-off .transcript-viewport {
+    opacity: 0 !important;
+    pointer-events: none;
+    transform: translateX(220px);
+  }
+
+  /* Mic off — dim avatar + text, tint button */
+  body.mic-off .avatar-wrap  { opacity: 0.25; }
+  body.mic-off:not(.captions-off) .transcript-viewport { opacity: 0.25 !important; }
+  body.mic-off #micBtn { background: rgba(242,182,180,0.22); color: #f2b6b4; }
+
+  /* Mic access overlay */
+  .mic-overlay {
+    position: absolute;
+    bottom: 102px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 13px 18px;
+    background: rgba(20, 12, 38, 0.90);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    font-size: 13.5px; color: var(--ink-dim);
+    white-space: nowrap;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    transform: translateX(-50%) translateY(6px);
+    z-index: 10;
+  }
+  body.mic-off .mic-overlay {
+    opacity: 1; pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+  }
+  .mic-overlay .mdi { font-size: 18px; color: #f2b6b4; flex-shrink: 0; }
+  .mic-overlay-btns { display: flex; gap: 6px; margin-left: 8px; flex-shrink: 0; }
+  .mic-overlay-dismiss,
+  .mic-overlay-secondary {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font: inherit; font-size: 12px; font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .mic-overlay-dismiss {
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: var(--ink);
+  }
+  .mic-overlay-dismiss:hover { background: rgba(255,255,255,0.18); }
+  .mic-overlay-secondary {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--ink-dim);
+  }
+  .mic-overlay-secondary:hover { background: rgba(255,255,255,0.08); color: var(--ink); }
+
+  /* Debug widget */
+  .debug-btn {
+    display: block; width: 100%;
+    padding: 5px 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    color: rgba(245,241,250,0.7);
+    font-family: inherit; font-size: 12px;
+    text-align: left; cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .debug-btn:hover { background: rgba(255,255,255,0.10); color: rgba(245,241,250,1); }
+  .debug-btn.debug-active { background: rgba(107,99,246,0.35); border-color: rgba(107,99,246,0.5); color: #fff; }
+  #debugWidget.debug-collapsed #debugBody { display: none; }
+
+  /* Flow selector */
+  #flowSelector {
+    position: fixed;
+    bottom: 16px; left: 16px;
+    z-index: 9998;
+    background: rgba(10,6,24,0.88);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 12px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    font-size: 12px;
+    color: rgba(245,241,250,0.75);
+    min-width: 180px;
+    overflow: hidden;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  #flowSelector.fs-hidden {
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.55s ease, transform 0.7s cubic-bezier(.2,.7,.2,1);
-    z-index: 4;
-  }
-  body.sharing .claude-panel {
-    position: relative;
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    align-self: center;
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-    top: auto;
-    right: auto;
-  }
-
-  /* macOS traffic lights */
-  .mac-chrome {
-    position: absolute; top: 0; left: 0; right: 0;
-    height: 34px;
-    display: flex; align-items: center;
-    padding: 0 16px;
-    gap: 8px;
-    background: #FFFFFF;
-  }
-  .mac-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
-  .mac-dot.red    { background: #ff5f57; }
-  .mac-dot.yellow { background: #febc2e; }
-  .mac-dot.green  { background: #28c840; }
-
-  .claude-body {
-    position: absolute; inset: 34px 0 0 0;
-    display: flex; flex-direction: column;
-    padding: 0;
-    color: #1f1a14;
-    font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  }
-
-  /* Slim chat header */
-  .chat-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 18px 10px;
-    border-bottom: 1px solid #EFEAE0;
-  }
-  .chat-wordmark { height: 18px; width: auto; display: block; }
-  .chat-meta {
-    font-size: 12px; color: #8c8776;
-    letter-spacing: 0.01em;
-  }
-
-  /* Conversation scroll area */
-  .chat-scroll {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 18px 20px 10px;
-    display: flex; flex-direction: column;
-    gap: 14px;
-  }
-  .chat-scroll::-webkit-scrollbar { width: 0; }
-
-  /* Message rows */
-  .msg {
-    display: flex;
-    gap: 10px;
-    opacity: 0;
     transform: translateY(6px);
-    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(.2,.7,.2,1);
   }
-  .msg.in { opacity: 1; transform: translateY(0); }
-  .msg-user { justify-content: flex-end; }
-  .msg-user .msg-bubble {
-    background: #F3EEE3;
-    border: 1px solid #E8E0CE;
-    color: #1f1a14;
-    max-width: 82%;
-  }
-  .msg-claude .msg-bubble {
-    background: #FFFFFF;
-    border: 1px solid #EFEAE0;
-    color: #1f1a14;
-    max-width: 100%;
-    flex: 1 1 auto;
-  }
-  .msg-bubble {
-    padding: 10px 12px;
-    border-radius: 12px;
-    font-size: 11px;
-    line-height: 1.5;
-  }
-  .msg-avatar {
-    width: 22px; height: 22px;
-    flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    margin-top: 2px;
-  }
-  .starburst {
-    width: 14px; height: 14px;
-    background: #D97757;
-    mask: radial-gradient(circle, transparent 32%, #000 33%) center/4px 4px,
-          conic-gradient(from 0deg, #000 0 25%, transparent 25% 50%, #000 50% 75%, transparent 75% 100%);
-    -webkit-mask: radial-gradient(circle, transparent 32%, #000 33%) center/4px 4px;
-    border-radius: 50%;
-  }
-  /* Simpler starburst using SVG-ish box */
-  .msg-avatar::before {
-    content: "";
-    width: 14px; height: 14px;
-    background: #D97757;
-    clip-path: polygon(
-      50% 0%, 57% 35%, 85% 15%, 65% 43%,
-      100% 50%, 65% 57%, 85% 85%, 57% 65%,
-      50% 100%, 43% 65%, 15% 85%, 35% 57%,
-      0% 50%, 35% 43%, 15% 15%, 43% 35%
-    );
-  }
-  .msg-avatar .starburst { display: none; }
-
-  /* User message attachment chip */
-  .attach-chip {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 4px 8px 4px 6px;
-    background: #FFFFFF;
-    border: 1px solid #E0D8C4;
-    border-radius: 8px;
-    font-size: 11px;
-    color: #1f1a14;
-    margin-bottom: 6px;
-  }
-  .attach-chip .material-symbols-outlined {
-    font-size: 14px; color: #575043;
-  }
-  .attach-chip .attach-name { font-weight: 600; }
-  .attach-chip .attach-meta { color: #8c8776; font-size: 11px; margin-left: 2px; }
-
-  /* Claude reply body */
-  .reply-intro {
-    font-size: 11px; line-height: 1.5;
-    margin-bottom: 8px;
-    min-height: 1em;
-  }
-  .reply-intro .caret-dark {
-    display: inline-block; width: 1.5px; height: 1em;
-    background: #1f1a14; vertical-align: -2px;
-    animation: blink 1s steps(2, end) infinite;
-  }
-
-  .reply-list {
-    margin: 0; padding: 0;
-    list-style: none;
-    display: grid; gap: 8px;
-    font-size: 11px; line-height: 1.5;
-    color: #3a342a;
-  }
-  .reply-list li {
-    display: grid;
-    grid-template-columns: 58px 1fr;
-    gap: 10px;
-    align-items: start;
-    opacity: 0;
-    transform: translateY(4px);
-    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(.2,.7,.2,1);
-  }
-  .reply-list li.in { opacity: 1; transform: translateY(0); }
-  .reply-list code { font-size: 11.5px; background: #F3EEE3; padding: 0 4px; border-radius: 3px; }
-  .reply-list b { color: #1f1a14; font-weight: 600; }
-
-  .reply-list .tag {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 100%;
-    height: 18px; padding: 0 6px;
-    border-radius: 999px;
-    font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-  .tag-risk { background: #FCE1D5; color: #9b3416; }
-  .tag-nit  { background: #ECE5F7; color: #4c2f94; }
-  .tag-skim { background: #DDE9D6; color: #2a5030; }
-
-  .reply-actions {
-    display: flex; gap: 8px;
-    margin-top: 12px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-  .reply-actions.in { opacity: 1; }
-  .reply-action {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 5px 10px;
-    background: #FFFFFF;
-    border: 1px solid #E0D8C4;
-    border-radius: 999px;
-    font-family: inherit;
-    font-size: 11px;
-    color: #1f1a14;
-    cursor: pointer;
-  }
-  .reply-action:hover { background: #FAF8F3; }
-  .reply-action .material-symbols-outlined { font-size: 13px; color: #575043; }
-
-  /* Thin composer pinned at bottom */
-  .composer-mini {
-    margin: 0 16px 14px;
+  .fs-label {
     padding: 8px 12px 6px;
-    border: 1px solid #EFEAE0;
-    background: #FFFFFF;
-    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.4;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
   }
-  .composer-mini .composer-input { font-size: 12.5px; min-height: 18px; color: #8c8776; }
-  .composer-mini .composer-row { margin-top: 10px; }
-
-  /* Shared composer-input / caret / model-chip / iconbtn */
-  .composer-input {
-    color: #1f1a14;
-    font-size: 14.5px;
-    min-height: 24px;
+  .fs-options { padding: 6px 8px 8px; display: flex; flex-direction: column; gap: 3px; }
+  .fs-btn {
+    display: block; width: 100%;
+    padding: 5px 8px;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: rgba(245,241,250,0.7);
+    font-family: inherit; font-size: 12px;
+    text-align: left; cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
   }
-  .composer-input.placeholder { color: #8c8776; }
-  .caret-dark {
-    display: inline-block;
-    width: 1.5px; height: 1em;
-    background: #1f1a14;
-    vertical-align: -2px;
-    margin-left: 1px;
-    animation: blink 1s steps(2, end) infinite;
-  }
-  .composer-row {
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .composer-left, .composer-right {
-    display: inline-flex; align-items: center; gap: 10px;
-    color: #575043;
-    font-size: 13px;
-  }
-  .composer-iconbtn {
-    width: 22px; height: 22px;
-    display: inline-flex; align-items: center; justify-content: center;
-    color: #575043;
-    background: transparent;
-    border: 0;
-  }
-  .composer-iconbtn .material-symbols-outlined { font-size: 18px; }
-  .model-chip {
-    display: inline-flex; align-items: center; gap: 3px;
-    font-size: 12px; color: #575043;
-  }
-  .model-chip .material-symbols-outlined { font-size: 14px; }
-
-  /* Panel-internal entrance */
-  .chat-header, .chat-scroll, .composer-mini {
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 0.45s ease, transform 0.45s cubic-bezier(.2,.7,.2,1);
-  }
-  body.sharing .chat-header   { opacity: 1; transform: translateY(0); transition-delay: 0.20s; }
-  body.sharing .chat-scroll   { opacity: 1; transform: translateY(0); transition-delay: 0.30s; }
-  body.sharing .composer-mini { opacity: 1; transform: translateY(0); transition-delay: 0.40s; }
+  .fs-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .fs-btn .fs-node { font-size: 10px; opacity: 0.4; float: right; margin-top: 1px; }
 
   /* Responsive tuck */
   @media (max-width: 820px) {
@@ -660,122 +866,7 @@
     .avatar { width: 170px; height: 170px; }
     .transcript { max-width: 520px; }
   }
-  /* ── Scenario selector ──────────────────────── */
-  .scenario-overlay {
-    position: fixed; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(10, 10, 12, 0.78);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 10000;
-    transition: opacity .35s ease;
-  }
-  .scenario-overlay.hidden { opacity: 0; pointer-events: none; }
-  .scenario-card {
-    background: #fff;
-    border: 1px solid rgba(0,0,0,.08);
-    border-radius: 18px;
-    padding: 28px 28px 20px;
-    box-shadow: 0 24px 60px rgba(0,0,0,.28);
-    width: 360px;
-  }
-  .scenario-card h2 {
-    margin: 0 0 4px;
-    font-size: 18px; font-weight: 700;
-    color: #111; letter-spacing: -0.01em;
-  }
-  .scenario-card > p {
-    margin: 0 0 18px;
-    font-size: 13px; color: #777; line-height: 1.5;
-  }
-  .scenario-list { display: flex; flex-direction: column; gap: 8px; }
-  .scenario-btn {
-    display: flex; align-items: center; gap: 14px;
-    width: 100%;
-    padding: 14px 16px;
-    background: #fafafa;
-    border: 1px solid #eee;
-    border-radius: 12px;
-    cursor: pointer;
-    font-family: inherit;
-    text-align: left;
-    transition: background .15s ease, border-color .15s ease, transform .1s ease;
-  }
-  .scenario-btn:hover { background: #f3f0ff; border-color: #c4b5f0; transform: translateY(-1px); }
-  .scenario-btn:active { transform: translateY(0); }
-  .scenario-icon {
-    width: 38px; height: 38px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: #ede9f8;
-    border-radius: 10px;
-    color: #6a3dc4;
-  }
-  .scenario-icon .material-symbols-outlined { font-size: 20px; }
-  .scenario-info { flex: 1; min-width: 0; }
-  .scenario-role {
-    font-size: 14px; font-weight: 600; color: #111;
-    display: flex; align-items: center; gap: 7px;
-  }
-  .scenario-desc { font-size: 12px; color: #888; margin-top: 2px; }
-  .new-badge {
-    display: inline-block;
-    padding: 1px 7px;
-    background: #e8f5e9; color: #2e7d32;
-    border-radius: 999px;
-    font-size: 10.5px; font-weight: 700;
-    letter-spacing: 0.04em;
-  }
-  .scenario-chevron { color: #bbb; flex-shrink: 0; }
-  .scenario-chevron .material-symbols-outlined { font-size: 20px; }
-
   /* Start overlay — needed so first audio playback has a user gesture */
-  .start-overlay {
-    position: fixed; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(10, 10, 12, 0.78);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 9999;
-    transition: opacity .35s ease;
-  }
-  .start-overlay.hidden { opacity: 0; pointer-events: none; }
-  .start-card {
-    background: #fff;
-    border: 1px solid rgba(0,0,0,.08);
-    border-radius: 16px;
-    padding: 28px 32px;
-    text-align: center;
-    box-shadow: 0 24px 60px rgba(0,0,0,.25);
-    max-width: 360px;
-  }
-  .start-card h2 {
-    margin: 0 0 8px;
-    font-size: 20px;
-    font-weight: 600;
-    color: #111;
-    letter-spacing: -0.01em;
-  }
-  .start-card p {
-    margin: 0 0 20px;
-    font-size: 14px;
-    color: #555;
-    line-height: 1.5;
-  }
-  .start-btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: #111;
-    color: #fff;
-    border: 0;
-    padding: 12px 22px;
-    border-radius: 999px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background .15s ease, transform .1s ease;
-  }
-  .start-btn:hover { background: #2a2a2a; }
-  .start-btn:active { transform: translateY(1px); }
-
   /* ── Responsive ──────────────────────────────── */
   @media (max-width: 960px) {
     /* Default view: 2-col → single centered column */
@@ -805,45 +896,6 @@
     }
     .transcript-track { font-size: 16px; }
 
-    /* Sharing: stack all 3 in single column, allow internal scroll */
-    body.sharing .center {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto auto 1fr;
-      padding: clamp(8px, 2vw, 24px);
-      gap: clamp(12px, 2vh, 20px) 0;
-      overflow-y: auto;
-      align-items: start;
-      justify-items: center;
-    }
-
-    body.sharing .avatar-col {
-      grid-column: 1; grid-row: 1;
-      width: 100%;
-      justify-content: center;
-      align-self: auto;
-    }
-
-    body.sharing .transcript-viewport {
-      grid-column: 1; grid-row: 2;
-      justify-self: center;
-      width: min(360px, 100%);
-      height: 130px;
-      text-align: left;
-    }
-
-    body.sharing .avatar-wrap { width: 160px; height: 160px; }
-    body.sharing .avatar { width: 120px; height: 120px; }
-    body.sharing .ring.r2 { inset: -14px; }
-
-    /* Claude panel: pull into grid flow when sharing */
-    body.sharing .claude-panel {
-      position: static;
-      width: 100%;
-      max-width: 100%;
-      height: clamp(320px, 48vh, 500px);
-      transform: none;
-      top: auto; right: auto;
-    }
   }
 
   @media (max-width: 520px) {
@@ -863,106 +915,110 @@
 
     .toolbar { gap: 4px; padding: 5px; }
     .end-btn { padding: 7px 14px 7px 10px; font-size: 12.5px; }
-    .yes-btn { padding: 7px 12px 7px 9px; font-size: 12.5px; }
-
-    body.sharing .claude-panel {
-      height: clamp(280px, 44vh, 360px);
-    }
   }
 </style>
 </head>
-<body>
+<body class="not-started">
 
-<!-- Scenario selector -->
-<div class="scenario-overlay" id="scenarioOverlay">
-  <div class="scenario-card">
-    <h2>Choose a scenario</h2>
-    <p>Select the role you'd like to explore.</p>
-    <div class="scenario-list">
-      <button class="scenario-btn" id="scenarioEngineer">
-        <div class="scenario-icon"><span class="material-symbols-outlined">code</span></div>
-        <div class="scenario-info">
-          <div class="scenario-role">Lead Engineer</div>
-          <div class="scenario-desc">Weekly AI-assisted code review check-in</div>
-        </div>
-        <div class="scenario-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </button>
-      <button class="scenario-btn" id="scenarioCsm">
-        <div class="scenario-icon"><span class="material-symbols-outlined">support_agent</span></div>
-        <div class="scenario-info">
-          <div class="scenario-role">CSM <span class="new-badge">New</span></div>
-          <div class="scenario-desc">Customer success AI usage review</div>
-        </div>
-        <div class="scenario-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </button>
-      <button class="scenario-btn" id="scenarioWfr">
-        <div class="scenario-icon"><span class="material-symbols-outlined">analytics</span></div>
-        <div class="scenario-info">
-          <div class="scenario-role">CSM <span class="new-badge" style="background:#e3f2fd;color:#1565c0;">WFR</span></div>
-          <div class="scenario-desc">AI adoption calibration · data collection</div>
-        </div>
-        <div class="scenario-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Start overlay: ensures first audio playback has a user gesture -->
-<div class="start-overlay hidden" id="startOverlay">
-  <div class="start-card">
-    <h2>Ready for your check-in?</h2>
-    <p>Your coach will walk you through a quick review of this week's AI-assisted work.</p>
-    <button class="start-btn" id="startBtn">
-      <span class="material-symbols-outlined" style="font-size:18px;">play_arrow</span>
-      Start check-in
-    </button>
-  </div>
-</div>
 
 <div class="stage">
 
   <!-- Top bar -->
   <header class="topbar">
     <div class="brand">
-      <span class="spark" aria-hidden="true">
-        <!-- Sparkle glyph -->
-        <svg viewBox="0 0 20 20" fill="none">
-          <path d="M10 1.5 L11.6 6.3 L16.5 8 L11.6 9.7 L10 14.5 L8.4 9.7 L3.5 8 L8.4 6.3 Z" fill="#fff"/>
-          <circle cx="16.5" cy="3.5" r="1.1" fill="#fff" opacity="0.85"/>
-          <circle cx="3.5"  cy="15.5" r="0.9" fill="#fff" opacity="0.7"/>
-        </svg>
-      </span>
+      <span class="spark mdi mdi-creation" aria-hidden="true"></span>
       Career Coach
     </div>
     <div class="top-actions">
       <div class="usage-group">
-        <span>AI usage check-in</span>
-        <span class="timer-pill" id="timerPill">02:15</span>
+        <span id="headerLabel"></span>
+        <span class="timer-pill" id="timerPill">00:00</span>
       </div>
       <button class="icon-btn" title="About this check-in" aria-label="About">
-        <span class="material-symbols-outlined">info</span>
+        <span class="mdi mdi-information-outline"></span>
       </button>
       <button class="icon-btn" title="Close" aria-label="Close">
-        <span class="material-symbols-outlined">close</span>
+        <span class="mdi mdi-close"></span>
       </button>
     </div>
   </header>
 
+  <!-- ── Start screen ──────────────────────────────────────────────────────── -->
+  <div class="start-screen">
+    <div class="start-hero">
+      <h1 class="start-title"></h1>
+      <p class="start-meta">
+        <span class="meta-label"></span>
+        <span class="meta-dot">·</span>
+        <span class="meta-duration"></span>
+      </p>
+    </div>
+
+    <div class="start-card">
+      <!-- Avatar + speech bubbles -->
+      <div class="start-avatar-zone">
+        <div class="speech-bubble sb-1">Focused on you</div>
+        <div class="speech-bubble sb-2">Ask anything</div>
+        <div class="speech-bubble sb-3">Always private</div>
+        <div class="start-avatar-ring">
+          <div class="start-avatar-img" id="startAvatarImg"></div>
+        </div>
+      </div>
+
+      <!-- Topics -->
+      <div class="start-topics">
+        <p class="cover-label">This conversation will cover</p>
+        <div class="cover-pills" id="coverPills"></div>
+        <p class="cover-desc" id="coverDesc"></p>
+      </div>
+
+      <!-- Actions -->
+      <div class="start-actions" style="display:flex;flex-direction:column;align-items:center;gap:12px">
+        <button class="start-main-btn" id="startBtn">
+          <span class="mdi mdi-microphone"></span>
+          Start conversation
+        </button>
+        <!-- <button class="start-later-btn">Schedule for later</button> -->
+      </div>
+    </div>
+
+    <div class="start-footer">
+      <span>Powered by</span>
+      <img src="images/eightfold-logo.png" alt="Eightfold" class="eightfold-logo">
+      <span>#Whatsnextforyou</span>
+    </div>
+  </div>
+
   <!-- Center composition -->
-  <main class="center">
+  <main class="center" style="opacity:0">
     <!-- Avatar column -->
     <div class="avatar-col">
       <div class="avatar-wrap">
-        <div class="ring r2"></div>
-        <div class="ring r1"></div>
-        <div class="avatar">
-          <img src="images/john.png" alt="John, your Career Coach" />
+        <div class="blobs" id="blobs">
+          <div class="blob b1"></div>
+          <div class="blob b2"></div>
+          <div class="blob b3"></div>
+        </div>
+        <div class="rings-wrap" id="ringsWrap"></div>
+        <div class="avatar-border">
+          <div class="avatar">
+            <video loop muted playsinline preload="auto" id="coachVideo">
+              <source src="videos/Coach_Claude.mp4" type="video/mp4">
+            </video>
+            <video loop muted playsinline preload="auto" id="listeningVideo">
+              <source src="videos/Coach_Listening.mp4" type="video/mp4">
+            </video>
+          </div>
         </div>
         <div class="speaker-chip" aria-label="John is speaking">
           <span class="bars" aria-hidden="true">
             <i></i><i></i><i></i><i></i>
           </span>
           John
+        </div>
+        <div class="listening-chip" aria-label="Listening">
+          <span class="listen-dot" aria-hidden="true"></span>
+          Listening
         </div>
       </div>
     </div>
@@ -974,515 +1030,699 @@
       </div>
     </div>
 
-    <!-- Claude mock panel — animates in when user says "Yes" -->
-    <div class="claude-panel" id="claudePanel" aria-hidden="true">
-      <div class="mac-chrome" aria-hidden="true">
-        <span class="mac-dot red"></span>
-        <span class="mac-dot yellow"></span>
-        <span class="mac-dot green"></span>
-      </div>
-      <div class="claude-body">
-        <!-- Slim header while in-chat -->
-        <div class="chat-header">
-          <img src="images/claude-logo.png" alt="Claude" class="chat-wordmark" />
-          <div class="chat-meta">PR review · Sonnet 4.6</div>
-        </div>
-
-        <!-- Conversation area — user message + Claude reply -->
-        <div class="chat-scroll" id="chatScroll">
-          <!-- User bubble (sent) -->
-          <div class="msg msg-user" id="msgUser" aria-hidden="true">
-            <div class="msg-bubble">
-              <div class="attach-chip">
-                <span class="material-symbols-outlined">commit</span>
-                <span class="attach-name">feat/payment-retry-logic</span>
-                <span class="attach-meta">#4821 · 8 files</span>
-              </div>
-              <div class="msg-text">Review this PR — what do I actually need to look at?</div>
-            </div>
-          </div>
-
-          <!-- Claude reply (streams in) -->
-          <div class="msg msg-claude" id="msgClaude" aria-hidden="true">
-            <div class="msg-avatar">
-              <span class="starburst"></span>
-            </div>
-            <div class="msg-bubble">
-              <div class="reply-intro" id="replyIntro"></div>
-              <ul class="reply-list" id="replyList">
-                <li data-step="1"><span class="tag tag-risk">Risky</span><div><b>api/payments/retry.ts</b> — new exponential backoff. Confirm idempotency key is set before the retry loop or you'll double-charge on timeout.</div></li>
-                <li data-step="2"><span class="tag tag-nit">FYI</span><div><b>lib/logger.ts</b> — level changed from <code>info</code> to <code>debug</code>. Probably intentional, but worth a word with Priya.</div></li>
-                <li data-step="3"><span class="tag tag-skim">Skim</span><div>5 test files + 1 doc update. Coverage holds at 87%. Safe to approve.</div></li>
-              </ul>
-              <div class="reply-actions" id="replyActions">
-                <button class="reply-action"><span class="material-symbols-outlined">open_in_new</span>Open in GitHub</button>
-                <button class="reply-action"><span class="material-symbols-outlined">done_all</span>Approve with notes</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Thin composer pinned at bottom (post-send state) -->
-        <div class="composer composer-mini">
-          <div class="composer-input placeholder-mini" id="claudeInput">
-            <span class="placeholder">Reply to Claude…</span>
-          </div>
-          <div class="composer-row">
-            <div class="composer-left">
-              <button class="composer-iconbtn" aria-label="Add attachment" tabindex="-1">
-                <span class="material-symbols-outlined">add</span>
-              </button>
-            </div>
-            <div class="composer-right">
-              <span class="model-chip">
-                Sonnet 4.6
-                <span class="material-symbols-outlined">expand_more</span>
-              </span>
-              <button class="composer-iconbtn" aria-label="Voice input" tabindex="-1">
-                <span class="material-symbols-outlined">mic</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="action-row" hidden>
-          <button class="action-pill" id="pillCareerChat"><span class="material-symbols-outlined">work</span>Career chat</button>
-        </div>
-      </div>
-      </div>
-    </div>
   </main>
 
+  <!-- Mic access overlay -->
+  <div class="mic-overlay" role="status" aria-live="polite">
+    <span class="mdi mdi-microphone-off" aria-hidden="true"></span>
+    Career Agent needs to hear you to continue.
+    <div class="mic-overlay-btns">
+      <button class="mic-overlay-secondary">Switch to text</button>
+      <button class="mic-overlay-dismiss" id="micDismiss">Enable mic</button>
+    </div>
+  </div>
+
   <!-- Bottom toolbar -->
-  <div class="toolbar" role="toolbar" aria-label="Session controls">
-    <button class="tool-btn" title="Show transcript" aria-label="Show transcript">
-      <span class="material-symbols-outlined">subtitles</span>
+  <div class="toolbar" role="toolbar" aria-label="Session controls" style="opacity:0">
+    <button class="tool-btn" id="captionBtn" title="Toggle captions" aria-label="Toggle captions" aria-pressed="true">
+      <span class="mdi mdi-closed-caption"></span>
     </button>
-    <button class="tool-btn" id="muteBtn" title="Mute voice" aria-label="Mute voice" aria-pressed="false">
-      <span class="material-symbols-outlined" id="muteIcon">volume_up</span>
+    <button class="tool-btn" id="micBtn" title="Microphone" aria-label="Microphone" aria-pressed="true">
+      <span class="mdi mdi-microphone" id="micIcon"></span>
     </button>
     <span class="divider" aria-hidden="true"></span>
     <button class="end-btn" id="endBtn">
-      <span class="material-symbols-outlined">close</span>
+      <span class="mdi mdi-close"></span>
       End check-in
     </button>
   </div>
 </div>
 
 <script>
-  // Live timer — starts at 02:15 and ticks upward to match a live session feel
+  // ── Flow data (swap this JSON to change the conversation) ─────────────────
+  let ACTIVE_FLOW = null;
+  let _startNodeOverride = null;
+  let _timerInterval  = null;
+  let _bodyObserver   = null;
+  let _sessionStarted = false;
+
+  // ── Avatar image preload — runs immediately so placeholder is never black ─
   (() => {
+    const img = new Image();
+    img.onload = () => {
+      document.querySelectorAll('.avatar, #startAvatarImg').forEach(el => el.classList.add('image-loaded'));
+    };
+    img.src = 'images/john.png';
+  })();
+
+  // ── Flow loader — fetches a flow JSON file and populates the start screen ─
+  function loadFlow(flowData) {
+    ACTIVE_FLOW = flowData;
+    const m = ACTIVE_FLOW.meta;
+
+    document.querySelector('.start-title').textContent   = m.title;
+    document.querySelector('.meta-label').textContent    = m.conversationType;
+    document.querySelector('.meta-duration').textContent = m.duration;
+    document.getElementById('headerLabel').textContent   = m.conversationType;
+
+    const pillsEl = document.getElementById('coverPills');
+    const descEl  = document.getElementById('coverDesc');
+
+    pillsEl.innerHTML = m.topics.map((t, i) =>
+      `<button class="cover-pill${i === 0 ? ' active' : ''}" data-idx="${i}">${t.label}</button>`
+    ).join('');
+
+    const setDesc = (t) => {
+      descEl.innerHTML = `<strong class="cover-time">${t.time}</strong> · ${t.description}`;
+    };
+
+    setDesc(m.topics[0]);
+
+    pillsEl.querySelectorAll('.cover-pill').forEach((pill, i) => {
+      pill.addEventListener('click', () => {
+        pillsEl.querySelectorAll('.cover-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        const t = m.topics[i];
+        descEl.style.opacity = '0';
+        setTimeout(() => { setDesc(t); descEl.style.opacity = '1'; }, 150);
+      });
+    });
+  }
+
+  loadFlow(FLOW_voice_intake_sarah);
+
+  // ── Videos + timer — only start when user clicks Begin ──────────────────
+
+  // TODO: Listening video crop is still broken in Safari.
+  // Safari ignores object-position on <video> elements entirely (longstanding WebKit bug),
+  // so this function manually replicates object-fit:cover + object-position:70% top by
+  // sizing the element to the video's natural aspect ratio and offsetting `left` to
+  // show the correct portion of the frame (coach's face is on the right of the shot).
+  // The function is called on `canplay` and again from sync() each time agent-listening
+  // is entered, but in practice Safari sometimes still renders the video content offset
+  // within the element — possibly because videoWidth/videoHeight aren't stable yet when
+  // the styles are applied. Needs more investigation; Chrome works correctly.
+  function _positionListeningVideo() {
+    const lvid = document.getElementById('listeningVideo');
+    if (!lvid) return;
+    const avatar = lvid.closest('.avatar');
+    if (!avatar || !lvid.videoWidth) return;
+
+    const cW = avatar.offsetWidth;
+    const cH = avatar.offsetHeight;
+    const vRatio = lvid.videoWidth / lvid.videoHeight;
+    const cRatio = cW / cH;
+
+    let scaledW, scaledH;
+    if (vRatio > cRatio) { scaledH = cH; scaledW = scaledH * vRatio; }
+    else                  { scaledW = cW; scaledH = scaledW / vRatio; }
+
+    const overflowX = scaledW - cW;
+    const leftPx = -(0.70 * overflowX);
+
+    Object.assign(lvid.style, {
+      width:  scaledW + 'px',
+      height: scaledH + 'px',
+      left:   leftPx  + 'px',
+      right:  'auto',
+      top:    '0px',
+    });
+  }
+
+  function _startSession() {
+    const cvid = document.getElementById('coachVideo');
+    const lvid = document.getElementById('listeningVideo');
+
+    if (lvid) {
+      lvid.addEventListener('canplay', _positionListeningVideo, { once: true });
+      if (lvid.videoWidth > 0) _positionListeningVideo(); // already ready
+      lvid.load();
+    }
+
+    if (cvid) {
+      const onReady = () => {
+        cvid.pause();
+        document.querySelector('.avatar').classList.add('video-loaded');
+      };
+      if (cvid.readyState >= 2) { onReady(); }
+      else { cvid.addEventListener('canplay', onReady, { once: true }); }
+
+      const sync = () => {
+        const speaking  = document.body.classList.contains('speaking');
+        const micOff    = document.body.classList.contains('mic-off');
+        const listening = document.body.classList.contains('agent-listening');
+        if (speaking && !micOff) {
+          cvid.play().catch(() => {});
+          if (lvid) lvid.pause();
+        } else if (listening && !micOff) {
+          cvid.pause();
+          if (lvid) {
+            _positionListeningVideo();
+            const playWhenReady = () => {
+              if (document.body.classList.contains('agent-listening') &&
+                  !document.body.classList.contains('mic-off')) {
+                _positionListeningVideo();
+                lvid.play().catch(() => {});
+              }
+            };
+            if (lvid.readyState >= 2) {
+              playWhenReady();
+            } else {
+              lvid.load();
+              lvid.addEventListener('canplay', playWhenReady, { once: true });
+            }
+          }
+        } else {
+          cvid.pause();
+          if (lvid) lvid.pause();
+        }
+      };
+      _bodyObserver = new MutationObserver(sync);
+      _bodyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    // Timer
     const el = document.getElementById('timerPill');
-    let seconds = 2 * 60 + 15;
-    setInterval(() => {
-      seconds += 1;
+    let seconds = 0;
+    _timerInterval = setInterval(() => {
+      seconds++;
       const m = String(Math.floor(seconds / 60)).padStart(2, '0');
       const s = String(seconds % 60).padStart(2, '0');
       el.textContent = `${m}:${s}`;
     }, 1000);
-  })();
-
-  // Voice narration
-  // --------------
-  // Primary: ElevenLabs streaming TTS (warm, natural "coach" voices).
-  // Fallback: Web Speech API (if the ElevenLabs call fails / quota / offline).
-  // Demo-only: API key is embedded — rotate after sharing externally.
-  const Voice = (() => {
-    const ELEVEN_KEY = 'sk_9347d07a01167710e35cd3760ff1fa71c6f26e394595c947';
-    const MODEL_ID = 'eleven_turbo_v2_5';
-
-    // Custom voice from user's ElevenLabs workspace.
-    const VOICE_ID = '15CVCzDByBinCIoCblXo';
-
-    let muted = false;
-    let currentVoiceId = VOICE_ID;
-    let currentAudio = null;
-    let fallbackVoice = null; // Web Speech SpeechSynthesisVoice
-    let genCounter = 0;       // each speak() call bumps this; stale requests check before acting
-
-    // Pick a reasonable Web Speech fallback (one time)
-    function pickFallback() {
-      if (!('speechSynthesis' in window)) return null;
-      const voices = speechSynthesis.getVoices();
-      const score = v => {
-        const n = (v.name || '').toLowerCase();
-        let s = /en[-_]us/i.test(v.lang) ? 40 : /^en/i.test(v.lang) ? 25 : 0;
-        if (/(premium|enhanced|neural|natural|studio)/.test(n)) s += 25;
-        if (/(samantha|ava|aria|jenny|google us english)/.test(n)) s += 15;
-        return s;
-      };
-      return voices.slice().sort((a, b) => score(b) - score(a))[0] || null;
-    }
-    if ('speechSynthesis' in window) {
-      fallbackVoice = pickFallback();
-      speechSynthesis.onvoiceschanged = () => { fallbackVoice = pickFallback(); };
-    }
-
-    function stop() {
-      if (currentAudio) {
-        try {
-          currentAudio.onended = null;
-          currentAudio.onerror = null;
-          currentAudio.pause();
-          currentAudio.removeAttribute('src');
-          currentAudio.load(); // flush buffered data without firing error on cleared src
-        } catch (e) {}
-        currentAudio = null;
-      }
-      if ('speechSynthesis' in window) speechSynthesis.cancel();
-    }
-
-    function speakFallback(text, gen) {
-      if (gen !== genCounter) return; // stale
-      if (!('speechSynthesis' in window)) return;
-      try {
-        const u = new SpeechSynthesisUtterance(text);
-        if (fallbackVoice) u.voice = fallbackVoice;
-        u.rate = 0.96; u.pitch = 0.98;
-        speechSynthesis.speak(u);
-      } catch (e) {}
-    }
-
-    // Returns a promise that resolves when playback finishes (or is superseded/muted).
-    async function speak(text) {
-      if (muted) return;
-      const gen = ++genCounter;
-      stop();
-      try {
-        const res = await fetch(
-          `https://api.elevenlabs.io/v1/text-to-speech/${currentVoiceId}/stream?output_format=mp3_44100_128`,
-          {
-            method: 'POST',
-            headers: {
-              'xi-api-key': ELEVEN_KEY,
-              'Content-Type': 'application/json',
-              'Accept': 'audio/mpeg',
-            },
-            body: JSON.stringify({
-              text,
-              model_id: MODEL_ID,
-              voice_settings: { stability: 0.45, similarity_boost: 0.75, style: 0.25, use_speaker_boost: true },
-            }),
-          }
-        );
-        if (gen !== genCounter) return;
-        if (!res.ok) throw new Error('ElevenLabs ' + res.status);
-        const blob = await res.blob();
-        if (gen !== genCounter || muted) return;
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        currentAudio = audio;
-        // Cancel any in-flight Web Speech so we don't double up.
-        if ('speechSynthesis' in window) speechSynthesis.cancel();
-        await new Promise((resolve) => {
-          let started = false;
-          audio.onplaying = () => { started = true; };
-          audio.onended = () => { URL.revokeObjectURL(url); if (currentAudio === audio) currentAudio = null; resolve(); };
-          audio.onerror = () => {
-            URL.revokeObjectURL(url);
-            if (gen !== genCounter) return resolve();
-            // Only fall back if we never heard a single frame.
-            if (!started) speakFallback(text, gen);
-            resolve();
-          };
-          audio.play().catch(() => {
-            // play() rejection doesn't always mean failure — some browsers reject
-            // even when playback starts. Only fall back if nothing ever played.
-            if (!started && gen === genCounter) speakFallback(text, gen);
-            resolve();
-          });
-        });
-      } catch (e) {
-        if (gen !== genCounter) return;
-        console.warn('[Voice] ElevenLabs failed, falling back to Web Speech:', e);
-        speakFallback(text, gen);
-      }
-    }
-
-    function setMuted(v) {
-      muted = !!v;
-      if (muted) { genCounter++; stop(); }
-    }
-
-    return { speak, setMuted, isMuted: () => muted };
-  })();
-  const speakLine = (t) => Voice.speak(t);
-
-  // Mute toggle + voice picker in the toolbar
-  (() => {
-    const btn = document.getElementById('muteBtn');
-    const icon = document.getElementById('muteIcon');
-    btn.addEventListener('click', () => {
-      const nowMuted = !Voice.isMuted();
-      Voice.setMuted(nowMuted);
-      btn.setAttribute('aria-pressed', String(nowMuted));
-      btn.title = nowMuted ? 'Unmute voice' : 'Mute voice';
-      btn.setAttribute('aria-label', btn.title);
-      icon.textContent = nowMuted ? 'volume_off' : 'volume_up';
-    });
-
-  })();
-
-  // ── Scenario configs ──────────────────────────────────────────────────────
-  const SCENARIOS = {
-    engineer: {
-      script: [
-        "Good start. Here's where I'd focus next.",
-        "You spend about five hours a week reviewing code — a lot of that is catching the same routine issues you've seen a hundred times.",
-        "Claude can pre-read those for you. Let me show you — here's a review I ran on your last PR this morning.",
-        "See the Risky flag? That's the one you actually want to stare at. The small style note and the routine files, you can just trust.",
-        "Do this on every PR and you get a full hour back on Tuesdays. Want me to set it up on your repo?"
-      ],
-      panelMeta: 'PR review · Sonnet 4.6',
-      attachIcon: 'commit',
-      attachLabel: 'feat/payment-retry-logic',
-      attachMeta: '#4821 · 8 files',
-      userText: 'Review this PR — what do I actually need to look at?',
-      claudeIntro: "Looked at all 8 files. Here's what's worth your attention:",
-      items: [
-        { tag: 'tag-risk', label: 'Risky', html: '<b>api/payments/retry.ts</b> — new exponential backoff. Confirm idempotency key is set before the retry loop or you\'ll double-charge on timeout.' },
-        { tag: 'tag-nit',  label: 'FYI',   html: '<b>lib/logger.ts</b> — level changed from <code>info</code> to <code>debug</code>. Probably intentional, but worth a word with Priya.' },
-        { tag: 'tag-skim', label: 'Skim',  html: '5 test files + 1 doc update. Coverage holds at 87%. Safe to approve.' }
-      ],
-      actions: [
-        { icon: 'open_in_new', label: 'Open in GitHub' },
-        { icon: 'done_all',    label: 'Approve with notes' }
-      ]
-    },
-    csm: {
-      script: [
-        "Hey — let's look at your week. Claude assisted on 31 tasks across your 12 active accounts.",
-        "You're getting strong mileage on post-call summaries — nine this week, averaging under 4 minutes each.",
-        "The one I want to flag is Vantage. One point four million ARR, renewal in 38 days, and their CFO hasn't joined a call since February.",
-        "That usage drop in their analytics module is your strongest talking point — frame it as a roadmap question, not a red flag.",
-        "Get Sarah Chen into a business case review before May 9. That's the move that closes this renewal."
-      ],
-      panelMeta: 'Account brief · Sonnet 4.6',
-      attachIcon: 'description',
-      attachLabel: 'Vantage-Q2-Brief.pdf',
-      attachMeta: '47 days to renewal',
-      userText: "Here's the account brief and usage data for this week. What should I prioritize before the renewal call?",
-      claudeIntro: "Three things to nail before the Vantage renewal call:",
-      items: [
-        { tag: 'tag-risk', label: 'Risk',   html: '<b>Usage drop</b> — Analytics module down 34% since the Jan release. Surface this proactively; frame it as a roadmap question, not a red flag.' },
-        { tag: 'tag-nit',  label: 'Action', html: '<b>Exec gap</b> — Sarah Chen (CFO) hasn\'t joined a call since Feb 3. She signs the renewal. Get her into a business case review by May 9.' },
-        { tag: 'tag-skim', label: 'Intel',  html: '<b>Competition</b> — Vantage evaluated Gainsight in Q1. Have your workflow integration differentiators ready for the renewal call.' }
-      ],
-      actions: [
-        { icon: 'edit',            label: 'Draft exec email' },
-        { icon: 'space_dashboard', label: 'Build QBR outline' }
-      ]
-    },
-    wfr: {
-      script: [
-        "Hey Sarah — you're at 31% AI adoption. That's the share of your augmentable work you're actively doing with AI today.",
-        "I'm looking at your top three augmentable tasks: QBR preparation, post-call follow-ups, and account research. Here's what the data shows.",
-        "The biggest gap is QBR prep. Your peers are averaging 64% AI-assisted, and your skills profile doesn't show AI signals there. That's 5 hours a week — at least 2 are reclaimable.",
-        "CSMs at your level who closed that gap started with AI-drafted exec summaries — not the full deck. Most get a solid first draft in under 20 minutes. That's where I'd suggest starting."
-      ],
-      panelMeta: 'WFR calibration · Sonnet 4.6',
-      attachIcon: 'person',
-      attachLabel: 'Sarah Culhane · Customer Success Manager',
-      attachMeta: 'Enterprise Accounts · est. adoption 31%',
-      userText: 'Run AI adoption calibration for Sarah. Pull task data from Career Hub and compare to peer benchmarks.',
-      claudeIntro: 'Calibration complete. Here\'s Sarah\'s readiness by task:',
-      items: [
-        { tag: 'tag-risk', label: 'Gap',     html: '<b>QBR Preparation</b> (5 hrs/wk) — No AI signals in skills profile. Peer benchmark: 64% AI-assisted. Highest-impact gap for this role.' },
-        { tag: 'tag-nit',  label: 'Partial', html: '<b>Post-call Follow-ups</b> (6 hrs/wk) — Partial AI signals in profile, below peer level. 45% of potential estimated from Career Hub data.' },
-        { tag: 'tag-skim', label: 'Strong',  html: '<b>Account Research</b> (3 hrs/wk) — Strong AI signals in profile, consistent with peer patterns. 72% of potential estimated.' }
-      ],
-      actions: [
-        { icon: 'save',           label: 'Save calibration (44%)' },
-        { icon: 'assignment_add', label: 'Add to dev plan' }
-      ]
-    }
-  };
-  window.SCENARIO = SCENARIOS.engineer;
-
-  function applyScenarioToPanel(s) {
-    document.querySelector('.chat-meta').textContent = s.panelMeta;
-    const chip = document.querySelector('.attach-chip');
-    chip.querySelector('.material-symbols-outlined').textContent = s.attachIcon;
-    chip.querySelector('.attach-name').textContent = s.attachLabel;
-    chip.querySelector('.attach-meta').textContent = s.attachMeta;
-    document.querySelector('.msg-text').textContent = s.userText;
-    document.getElementById('replyList').innerHTML = s.items.map((it, i) =>
-      `<li data-step="${i+1}"><span class="tag ${it.tag}">${it.label}</span><div>${it.html}</div></li>`
-    ).join('');
-    document.getElementById('replyActions').innerHTML = s.actions.map(a =>
-      `<button class="reply-action"><span class="material-symbols-outlined">${a.icon}</span>${a.label}</button>`
-    ).join('');
   }
 
-  // Animated scrolling transcript — oldest on top, new sentences push up from the bottom.
-  // Each new line types in word-by-word; once it completes, older lines age (dimmer) and
-  // a fresh line slides in at the bottom.
+  function resetSession() {
+    // Stop any in-flight audio
+    if (_activeAudio) { _activeAudio.pause(); _activeAudio = null; }
+    if (_cancelAudio) { _cancelAudio(); _cancelAudio = null; }
+    // Stop rings and timer
+    stopRings();
+    if (_timerInterval) { clearInterval(_timerInterval); _timerInterval = null; }
+    // Disconnect body class observer
+    if (_bodyObserver) { _bodyObserver.disconnect(); _bodyObserver = null; }
+    // Pause videos and hide loaded state
+    const cvid = document.getElementById('coachVideo');
+    const lvid  = document.getElementById('listeningVideo');
+    if (cvid) cvid.pause();
+    if (lvid) lvid.pause();
+    document.querySelector('.avatar').classList.remove('video-loaded');
+    // Clear transcript
+    document.getElementById('track').innerHTML = '';
+    // Reset body classes (preserve captions-off)
+    ['speaking','agent-listening','user-speaking','mic-off','avatar-transitioning'].forEach(c =>
+      document.body.classList.remove(c));
+    document.body.classList.add('not-started');
+    // Remove any in-flight fly clone
+    document.querySelectorAll('.avatar-fly').forEach(f => f.remove());
+    // Clear inline styles set during fly animation
+    document.querySelector('.center').style.opacity   = '';
+    document.querySelector('.toolbar').style.opacity  = '';
+    const convBorder = document.querySelector('.avatar-border');
+    const convAvatar = document.querySelector('.avatar');
+    convBorder.style.opacity    = '';
+    convBorder.style.transition = '';
+    convAvatar.style.opacity    = '';
+    convAvatar.style.transition = '';
+    // Restore start-screen avatar ring
+    document.querySelector('.start-avatar-ring').style.opacity = '';
+    // Reset timer display
+    document.getElementById('timerPill').textContent = '00:00';
+    // Reset mic to unmuted
+    _muted      = false;
+    _flowPaused = false;
+    _resumeFlow = null;
+    document.getElementById('micBtn').setAttribute('aria-pressed', 'true');
+    document.getElementById('micIcon').className = 'mdi mdi-microphone';
+    document.getElementById('ringsWrap').classList.remove('paused');
+    // Allow start button to fire again
+    _sessionStarted = false;
+  }
+
+  // ── Audio playback (uses paths from JSON; fails silently if files missing) ─
+  let _activeAudio  = null;
+  let _cancelAudio  = null;
+  function playAudio(src, isAI) {
+    if (_activeAudio) { _activeAudio.pause(); _activeAudio = null; }
+    if (_cancelAudio) { _cancelAudio(); _cancelAudio = null; }
+    if (!src) return Promise.resolve();
+    return new Promise(resolve => {
+      const audio = new Audio(src);
+      _activeAudio = audio;
+      let settled = false;
+      const done = () => {
+        if (settled) return; settled = true;
+        _cancelAudio = null;
+        if (_activeAudio === audio) _activeAudio = null;
+        resolve();
+      };
+      _cancelAudio = done;
+      if (isAI) {
+        audio.addEventListener('playing', () => document.body.classList.add('speaking'), { once: true });
+      }
+      audio.onended = done;
+      audio.onerror = done;
+      audio.play().catch(done);
+    });
+  }
+
+  // ── Caption toggle ────────────────────────────────────────────────────────
   (() => {
-    const track = document.getElementById('track');
+    const btn = document.getElementById('captionBtn');
+    const icon = btn.querySelector('.mdi');
+    btn.addEventListener('click', () => {
+      const off = document.body.classList.toggle('captions-off');
+      btn.setAttribute('aria-pressed', String(!off));
+      icon.className = off ? 'mdi mdi-closed-caption-outline' : 'mdi mdi-closed-caption';
+    });
+  })();
 
-    const SCRIPT = [...window.SCENARIO.script];
+  // ── Mic toggle ────────────────────────────────────────────────────────────
+  let _muted      = false;
+  let _flowPaused = false;
+  let _resumeFlow = null;
 
-    const MAX_VISIBLE = 4;     // number of lines kept on-screen
-    const OLDEST_AGE  = 3;     // matches .age-3
+  (() => {
+    const btn      = document.getElementById('micBtn');
+    const icon     = document.getElementById('micIcon');
+    const dismiss  = document.getElementById('micDismiss');
+    const ringsWrap = document.getElementById('ringsWrap');
 
-    // Seed the first line as "current"
-    let idx = 0;
+    const setMic = (off) => {
+      _muted = off;
+      const vid = document.getElementById('coachVideo');
+      if (off) {
+        _flowPaused = true;
+        if (_activeAudio) _activeAudio.pause();
+        if (_cancelAudio) _cancelAudio();
+        stopRings();
+        if (vid) vid.pause();
+        ringsWrap.classList.add('paused');
+        document.body.classList.add('mic-off');
+      } else {
+        _flowPaused = false;
+        ringsWrap.classList.remove('paused');
+        document.body.classList.remove('mic-off');
+        if (document.body.classList.contains('speaking')) startRings();
+        if (_resumeFlow) {
+          const cb = _resumeFlow;
+          _resumeFlow = null;
+          cb();
+        }
+      }
+      btn.setAttribute('aria-pressed', String(!off));
+      icon.className = off ? 'mdi mdi-microphone-off' : 'mdi mdi-microphone';
+    };
 
-    const ageExisting = () => {
-      // bump everyone one step older (capped)
+    btn.addEventListener('click', () => setMic(!_muted));
+    dismiss.addEventListener('click', () => setMic(false));
+  })();
+
+  // ── Ring spawner ──────────────────────────────────────────────────────────
+  (() => {
+    const wrap = document.getElementById('ringsWrap');
+    const GAPS = [600, 1100, 700, 800]; // ms between each successive ring
+    let _timeouts = [];
+    let _active = false;
+
+    function spawnRing() {
+      const ring = document.createElement('div');
+      ring.className = 'ring';
+      wrap.appendChild(ring);
+      ring.addEventListener('animationend', () => ring.remove(), { once: true });
+    }
+
+    function scheduleNext(idx) {
+      const gap = GAPS[idx % GAPS.length];
+      const t = setTimeout(() => {
+        if (!_active) return;
+        spawnRing();
+        scheduleNext(idx + 1);
+      }, gap);
+      _timeouts.push(t);
+    }
+
+    window.startRings = () => {
+      if (_active) return;
+      _active = true;
+      spawnRing();         // first ring immediately
+      scheduleNext(0);
+    };
+
+    window.stopRings = () => {
+      _active = false;
+      _timeouts.forEach(clearTimeout);
+      _timeouts = [];
+      // in-flight rings finish their animation and self-remove via animationend
+    };
+  })();
+
+  // ── Flow engine ───────────────────────────────────────────────────────────
+  (() => {
+    const track    = document.getElementById('track');
+    const MAX_AGE  = 3;
+    const MAX_SHOW = 4;
+
+    function ageLines() {
       [...track.children].forEach(el => {
-        const cur = parseInt(el.dataset.age || '0', 10);
-        const next = Math.min(cur + 1, OLDEST_AGE);
+        const cur  = parseInt(el.dataset.age || '0', 10);
+        const next = Math.min(cur + 1, MAX_AGE);
         el.dataset.age = String(next);
         el.classList.remove('age-0','age-1','age-2','age-3');
         el.classList.add('age-' + next);
       });
-      // drop anything beyond the visible cap
-      while (track.children.length > MAX_VISIBLE) {
-        track.removeChild(track.firstElementChild);
-      }
-    };
+      while (track.children.length > MAX_SHOW) track.removeChild(track.firstElementChild);
+    }
 
-    const appendNewLine = () => {
+    // Streams text in by fading letter batches with a per-character stagger.
+    function typeLine(text) {
+      ageLines();
       const p = document.createElement('p');
-      p.className = 't-line age-0';
+      p.className  = 't-line age-0';
       p.dataset.age = '0';
-
-      const sentence = SCRIPT[idx];
-      const body = document.createElement('span');
-      body.className = 'body';
-      const caret = document.createElement('span');
-      caret.className = 'caret';
-
-      p.appendChild(body);
-      p.appendChild(caret);
       track.appendChild(p);
 
-      // Kick off narration; remember the promise so we can wait on it before advancing.
-      const voicePromise = speakLine(sentence);
+      const CHAR_MS  = 32;  // ms per character
+      const FADE_MS  = 350; // fade-in duration — keep in sync with CSS
 
-      // Type in one word at a time
-      const words = sentence.split(' ');
-      let w = 0;
-      const type = () => {
-        if (w >= words.length) {
-          // Line finished typing — fire UI beats tied to specific transcript lines.
-          if (idx === 2) {
-            setTimeout(() => window.engageShare && window.engageShare(), 500);
+      return new Promise(resolve => {
+        const chars = [...text];
+        let i = 0;
+        const tick = () => {
+          if (_flowPaused) { setTimeout(tick, 80); return; }
+          if (i >= chars.length) {
+            setTimeout(resolve, FADE_MS);
+            return;
           }
-          // Wait for BOTH: (a) audio to finish, (b) a short human pause after.
-          const TAIL_MS = 600;
-          Promise.resolve(voicePromise).then(() => {
-            setTimeout(() => {
-              caret.remove();
-              idx++;
-              if (idx >= SCRIPT.length) return;
-              ageExisting();
-              appendNewLine();
-            }, TAIL_MS);
-          });
-          return;
-        }
-        body.textContent += (w === 0 ? '' : ' ') + words[w];
-        w++;
-        const wordLen = words[w - 1]?.length || 3;
-        const base = 70 + wordLen * 22;
-        setTimeout(type, base + Math.random() * 90);
-      };
-      setTimeout(type, 220);
-    };
-
-    // Scenario selector → set active scenario, then show start overlay
-    const scenarioOverlay = document.getElementById('scenarioOverlay');
-    const startOverlay = document.getElementById('startOverlay');
-    function selectScenario(key) {
-      window.SCENARIO = SCENARIOS[key];
-      SCRIPT.length = 0;
-      window.SCENARIO.script.forEach(l => SCRIPT.push(l));
-      scenarioOverlay.classList.add('hidden');
-      setTimeout(() => {
-        scenarioOverlay.remove();
-        startOverlay.classList.remove('hidden');
-      }, 350);
+          const span = document.createElement('span');
+          span.className = 'stream-char';
+          span.textContent = chars[i];
+          p.appendChild(span);
+          i++;
+          setTimeout(tick, CHAR_MS);
+        };
+        setTimeout(tick, 80);
+      });
     }
-    document.getElementById('scenarioEngineer').addEventListener('click', () => selectScenario('engineer'));
-    document.getElementById('scenarioCsm').addEventListener('click', () => selectScenario('csm'));
-    document.getElementById('scenarioWfr').addEventListener('click', () => selectScenario('wfr'));
 
-    // Wait for user to click Start before kicking off (autoplay policy requires a gesture).
-    const startBtn = document.getElementById('startBtn');
-    startBtn.addEventListener('click', () => {
-      applyScenarioToPanel(window.SCENARIO);
-      startOverlay.classList.add('hidden');
-      setTimeout(() => startOverlay.remove(), 400);
-      appendNewLine();
-    }, { once: true });
-  })();
-
-  document.getElementById('endBtn').addEventListener('click', () => {
-    window.location.reload();
-  });
-
-  // Screenshare engagement — slides avatar, fades Claude chat view in,
-  // then sequentially reveals: user message → Claude intro (typed) → list items → actions.
-  (() => {
-    const panel     = document.getElementById('claudePanel');
-    const msgUser   = document.getElementById('msgUser');
-    const msgClaude = document.getElementById('msgClaude');
-    const intro     = document.getElementById('replyIntro');
-    const list      = document.getElementById('replyList');
-    const actions   = document.getElementById('replyActions');
-    let engaged = false;
-
-    window.engageShare = () => {
-      if (engaged) return;
-      engaged = true;
-      document.body.classList.add('sharing');
-      panel.setAttribute('aria-hidden', 'false');
-      setTimeout(playChatSequence, 900);
+    // TEMP: extra pauses after early nodes for visual review — delete this block when done
+    const TEMP_PAUSES = {
+      ai_1: 6000,
+      ai_2: 6000,
+      ai_3: 6000,
+      ai_4: 6000,
     };
+    // END TEMP
 
-    function playChatSequence() {
-      // 1) User message in
-      msgUser.setAttribute('aria-hidden', 'false');
-      msgUser.classList.add('in');
+    // Hue offset per AI node — shifts blob palette as conversation progresses
+    const BLOB_HUES = {
+      ai_1:  0,  ai_2:  8,  ai_3:  18, ai_4:  32,
+      ai_5: -14, ai_6: -24, ai_7:  42, ai_8:  -6,
+      ai_9: -30, ai_10: 24, ai_11: 12,
+    };
+    const blobsEl = document.getElementById('blobs');
 
-      // 2) Claude bubble appears with typing intro
-      setTimeout(() => {
-        msgClaude.setAttribute('aria-hidden', 'false');
-        msgClaude.classList.add('in');
-        typeIntro(window.SCENARIO.claudeIntro, () => {
-          // 3) Reveal the three list items staggered
-          const items = list.querySelectorAll('li');
-          items.forEach((li, i) => {
-            setTimeout(() => li.classList.add('in'), 120 + i * 260);
-          });
-          // 4) Show action buttons after items settle
-          setTimeout(() => actions.classList.add('in'), 120 + items.length * 260 + 200);
+    async function runNode(nodeId) {
+      if (!nodeId) {
+        // End of flow — loop back after a pause
+        setTimeout(() => { track.innerHTML = ''; runNode(ACTIVE_FLOW.startNode); }, 4000);
+        return;
+      }
+      const node   = ACTIVE_FLOW.nodes[nodeId];
+      if (!node) return;
+      const isUser = node.type === 'voice_user';
+      const vid    = document.getElementById('coachVideo');
+
+      if (!isUser && blobsEl) {
+        blobsEl.style.filter = `hue-rotate(${BLOB_HUES[nodeId] ?? 0}deg)`;
+      }
+
+      if (isUser) {
+        // User turn: freeze avatar, skip caption, wait for estimated speech duration
+        document.body.classList.remove('speaking');
+        document.body.classList.remove('agent-listening');
+        document.body.classList.add('user-speaking');
+        if (vid) vid.pause();
+
+        const wordCount = node.text.trim().split(/\s+/).length;
+        const estimatedMs = Math.max(1200, wordCount * 430); // ~140 WPM
+        await Promise.all([
+          _muted ? Promise.resolve() : playAudio(node.audio, false),
+          new Promise(r => setTimeout(r, estimatedMs)),
+        ]);
+
+        if (vid) vid.play().catch(() => {});
+        document.body.classList.remove('user-speaking');
+      } else {
+        // AI turn: type caption + play audio simultaneously
+        track.innerHTML = '';
+        document.body.classList.remove('agent-listening');
+        if (vid) vid.play().catch(() => {});
+        document.body.classList.add('speaking');
+        startRings();
+        await Promise.all([
+          _muted ? Promise.resolve() : playAudio(node.audio, true),
+          typeLine(node.text),
+        ]);
+        stopRings();
+        if (!_muted) document.body.classList.remove('speaking');
+        if (vid) vid.pause();
+        requestAnimationFrame(() => {
+          document.body.classList.add('agent-listening');
         });
-      }, 650);
-    }
+      }
 
-    function typeIntro(text, done) {
-      intro.innerHTML = '';
-      const body = document.createElement('span');
-      const caret = document.createElement('span');
-      caret.className = 'caret-dark';
-      intro.appendChild(body);
-      intro.appendChild(caret);
-
-      let i = 0;
-      const tick = () => {
-        if (i >= text.length) {
-          setTimeout(() => { caret.remove(); done && done(); }, 350);
+      const advance = () => {
+        if (!node.next?.autoProgress || !node.next.node) {
+          setTimeout(() => { track.innerHTML = ''; runNode(ACTIVE_FLOW.startNode); }, 4000);
           return;
         }
-        body.textContent += text[i++];
-        setTimeout(tick, 18 + Math.random() * 28);
+        setTimeout(() => runNode(node.next.node), (node.next.delay ?? 0) + (TEMP_PAUSES[nodeId] ?? 0)); // TEMP
       };
-      tick();
+
+      if (_flowPaused) {
+        _resumeFlow = advance;
+      } else {
+        advance();
+      }
     }
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      if (_sessionStarted) return;
+      _sessionStarted = true;
+      const startRing  = document.querySelector('.start-avatar-ring');
+      const convBorder = document.querySelector('.avatar-border');
+      const convAvatar = document.querySelector('.avatar');
+
+      const src = startRing.getBoundingClientRect();
+
+      // Build fly: gradient ring shell + inner image
+      const fly = document.createElement('div');
+      fly.className = 'avatar-fly';
+      Object.assign(fly.style, {
+        position: 'fixed', zIndex: '200',
+        left: src.left + 'px', top: src.top + 'px',
+        width: src.width + 'px', height: src.height + 'px',
+        borderRadius: '50%',
+        background: 'conic-gradient(from 290deg, #4751AD 0%, #C262BF 50%, #4751AD 100%)',
+        padding: '3px', boxSizing: 'border-box',
+      });
+      const flyInner = document.createElement('div');
+      Object.assign(flyInner.style, {
+        width: '100%', height: '100%', borderRadius: '50%',
+        overflow: 'hidden',
+        background: "url('images/john.png') center top/cover no-repeat",
+      });
+      fly.appendChild(flyInner);
+      document.body.appendChild(fly);
+
+      // Hide real avatars while fly is live
+      startRing.style.opacity = '0';
+      convBorder.style.opacity = '0';
+      convBorder.style.transition = convAvatar.style.transition = 'none';
+      convAvatar.style.opacity = '0';
+
+      // Remove not-started (triggers start-screen exit), hold center invisible
+      document.body.classList.remove('not-started');
+      document.body.classList.add('avatar-transitioning');
+      _startSession();
+
+      // Measure final dest now (.center has no transform offset due to avatar-transitioning)
+      const dst = convBorder.getBoundingClientRect();
+      const vpCx = src.left + src.width / 2;
+      const dur  = 480;
+      const ease = 'cubic-bezier(.4,0,.2,1)';
+
+      function moveFly(rect, d) {
+        fly.style.transition = `left ${d}ms ${ease},top ${d}ms ${ease},width ${d}ms ${ease},height ${d}ms ${ease}`;
+        Object.assign(fly.style, {
+          left: rect.left + 'px', top: rect.top + 'px',
+          width: rect.width + 'px', height: rect.height + 'px',
+        });
+      }
+
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        // Phase 1 — move to final vertical position and grow simultaneously
+        moveFly({ left: vpCx - dst.width/2, top: dst.top,
+                  width: dst.width, height: dst.height }, dur);
+
+        setTimeout(() => {
+          // Phase 2 — slide left to final conversation position
+          moveFly({ left: dst.left, top: dst.top, width: dst.width, height: dst.height }, dur);
+
+          setTimeout(() => {
+            // Step 1: reveal real avatar beneath the fly
+            document.body.classList.remove('avatar-transitioning');
+            document.querySelector('.center').style.opacity  = '';
+            document.querySelector('.toolbar').style.opacity = '';
+            convBorder.style.transition = 'opacity 200ms ease';
+            convAvatar.style.transition = 'opacity 200ms ease';
+            convBorder.style.opacity    = '1';
+            convAvatar.style.opacity    = '1';
+            // Step 2: once real avatar is in, fade out and remove fly
+            setTimeout(() => {
+              fly.style.transition = 'opacity 200ms ease';
+              fly.style.opacity = '0';
+              setTimeout(() => {
+                fly.remove();
+                convBorder.style.transition = convAvatar.style.transition = '';
+                // Start conversation after ~1s delay
+                const startNode = _startNodeOverride ?? ACTIVE_FLOW.startNode;
+                _startNodeOverride = null;
+                setTimeout(() => runNode(startNode), 1000);
+              }, 220);
+            }, 220);
+          }, dur + 50);
+        }, dur);
+      }));
+    });
   })();
+
+  // End button — no action (prototype)
+
+  // ── Debug widget ──────────────────────────────────────────────────────────
+  setTimeout(() => {
+    const widget = document.getElementById('debugWidget');
+    const toggle = document.getElementById('debugToggle');
+    const body   = document.getElementById('debugBody');
+
+    // Collapse/expand
+    toggle.addEventListener('click', () => {
+      const collapsed = widget.classList.toggle('debug-collapsed');
+      toggle.textContent = collapsed ? '▲' : '▼';
+    });
+
+    // Hide until refresh
+    document.getElementById('debugHide').addEventListener('click', () => {
+      widget.remove();
+    });
+
+    // View selection
+    document.getElementById('debugViewStart').addEventListener('click', () => {
+      document.body.classList.add('not-started');
+      setActive('debugViewStart');
+    });
+
+    document.getElementById('debugViewConvo').addEventListener('click', () => {
+      document.body.classList.remove('not-started');
+      // Ensure conversation elements are visible
+      document.querySelector('.center').style.opacity  = '';
+      document.querySelector('.toolbar').style.opacity = '';
+      setActive('debugViewConvo');
+    });
+
+    // State selection
+    document.getElementById('debugStateSpeaking').addEventListener('click', () => {
+      _flowPaused = true;
+      document.body.classList.remove('agent-listening', 'user-speaking', 'mic-off');
+      document.body.classList.add('speaking');
+      const cvid = document.getElementById('coachVideo');
+      const lvid = document.getElementById('listeningVideo');
+      if (cvid) cvid.play().catch(() => {});
+      if (lvid) lvid.pause();
+      startRings();
+      setActive('debugStateSpeaking');
+    });
+
+    document.getElementById('debugStateListening').addEventListener('click', () => {
+      _flowPaused = true;
+      document.body.classList.remove('speaking', 'user-speaking', 'mic-off');
+      document.body.classList.add('agent-listening');
+      const cvid = document.getElementById('coachVideo');
+      const lvid = document.getElementById('listeningVideo');
+      if (cvid) cvid.pause();
+      if (lvid) {
+        if (lvid.readyState >= 2) lvid.play().catch(() => {});
+        else lvid.addEventListener('canplay', () => lvid.play().catch(() => {}), { once: true });
+      }
+      stopRings();
+      setActive('debugStateListening');
+    });
+
+    function setActive(id) {
+      document.querySelectorAll('.debug-btn').forEach(b => b.classList.remove('debug-active'));
+      document.getElementById(id).classList.add('debug-active');
+    }
+  }, 0);
+
+  // ── Flow selector ────────────────────────────────────────────────────────
+  setTimeout(() => {
+    document.querySelectorAll('.fs-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (_sessionStarted) resetSession();
+        const flowId  = btn.dataset.flow;
+        const varName = `FLOW_${flowId}`;
+        const s = document.createElement('script');
+        s.src = `flows/${flowId}.js?_=${Date.now()}`;
+        s.onload = () => loadFlow(window[varName]);
+        document.head.appendChild(s);
+      });
+    });
+  }, 0);
 </script>
+  <!-- Flow selector -->
+  <div id="flowSelector">
+    <div class="fs-label">Select flow</div>
+    <div class="fs-options">
+      <button class="fs-btn" data-flow="voice_intake_sarah">Career Agent Intake <span class="fs-node">Sarah</span></button>
+      <button class="fs-btn" data-flow="voice_pr_review">PR Review Check-in <span class="fs-node">Sarah</span></button>
+      <button class="fs-btn" data-flow="voice_account_renewal">Account Renewal Prep <span class="fs-node">Sarah</span></button>
+      <button class="fs-btn" data-flow="voice_wfr">AI Adoption Calibration <span class="fs-node">Sarah</span></button>
+    </div>
+  </div>
+
+  <!-- Debug widget -->
+  <div id="debugWidget" style="display:none;
+    position:fixed; bottom:16px; left:16px; z-index:9999;
+    background:rgba(10,6,24,0.92); border:1px solid rgba(255,255,255,0.12);
+    border-radius:12px; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    font-family:inherit; font-size:12px; color:rgba(245,241,250,0.8);
+    min-width:180px; overflow:hidden;
+    box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  ">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.08);">
+      <span style="font-weight:600;letter-spacing:0.03em;opacity:0.5;font-size:11px;text-transform:uppercase;">Debug</span>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button id="debugHide" style="background:none;border:none;color:rgba(245,241,250,0.4);cursor:pointer;font-size:11px;padding:0 2px;" title="Hide until refresh">✕</button>
+        <button id="debugToggle" style="background:none;border:none;color:rgba(245,241,250,0.5);cursor:pointer;font-size:11px;padding:0 2px;">▼</button>
+      </div>
+    </div>
+    <div id="debugBody" style="padding:10px 12px;display:flex;flex-direction:column;gap:10px;">
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;opacity:0.4;margin-bottom:5px;">View</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <button class="debug-btn" id="debugViewStart">Start screen</button>
+          <button class="debug-btn" id="debugViewConvo">Conversation</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;opacity:0.4;margin-bottom:5px;">State</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <button class="debug-btn" id="debugStateSpeaking">Agent speaking</button>
+          <button class="debug-btn" id="debugStateListening">Agent listening</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

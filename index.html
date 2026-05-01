@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Career Coach — AI Usage Check-in</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" />
+<script src="config.js"></script>
 <script src="flows/voice_intake_sarah.js"></script>
 <style>
   @font-face {
@@ -1377,6 +1378,22 @@
   }
 
   // ── Audio playback (uses paths from JSON; fails silently if files missing) ─
+  async function elevenLabsTTS(text) {
+    const key = window.ELEVEN_KEY;
+    const voiceId = window.ELEVEN_VOICE_ID || 'EXAVITQu4vr4xnSDxMaL';
+    if (!key || !text) return null;
+    try {
+      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+        method: 'POST',
+        headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, model_id: 'eleven_turbo_v2', voice_settings: { stability: 0.5, similarity_boost: 0.75 } }),
+      });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
+    } catch { return null; }
+  }
+
   let _activeAudio  = null;
   let _cancelAudio  = null;
   function playAudio(src, isAI) {
@@ -1598,8 +1615,9 @@
         if (vid) vid.play().catch(() => {});
         document.body.classList.add('speaking');
         startRings();
+        const audioSrc = node.audio || (!_muted && window.ELEVEN_KEY ? await elevenLabsTTS(node.text) : null);
         await Promise.all([
-          _muted ? Promise.resolve() : playAudio(node.audio, true),
+          _muted ? Promise.resolve() : playAudio(audioSrc, true),
           typeLine(node.text),
         ]);
         stopRings();

@@ -1378,12 +1378,12 @@
   }
 
   // ── Audio playback (uses paths from JSON; fails silently if files missing) ─
-  async function elevenLabsTTS(text) {
+  async function elevenLabsTTS(text, voiceId) {
     const key = window.ELEVEN_KEY;
-    const voiceId = window.ELEVEN_VOICE_ID || 'EXAVITQu4vr4xnSDxMaL';
+    const vid = voiceId || window.ELEVEN_VOICE_ID || 'EXAVITQu4vr4xnSDxMaL';
     if (!key || !text) return null;
     try {
-      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${vid}`, {
         method: 'POST',
         headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, model_id: 'eleven_turbo_v2', voice_settings: { stability: 0.5, similarity_boost: 0.75 } }),
@@ -1601,7 +1601,7 @@
 
         const wordCount = node.text.trim().split(/\s+/).length;
         const estimatedMs = Math.max(1200, wordCount * 430); // ~140 WPM
-        const userAudioSrc = !_muted && window.ELEVEN_KEY ? await elevenLabsTTS(node.text) : null;
+        const userAudioSrc = !_muted && window.ELEVEN_KEY ? await elevenLabsTTS(node.text, window.ELEVEN_VOICE_ID) : null;
         await Promise.all([
           _muted ? Promise.resolve() : playAudio(userAudioSrc, false),
           new Promise(r => setTimeout(r, estimatedMs)),
@@ -1616,7 +1616,7 @@
         if (vid) vid.play().catch(() => {});
         document.body.classList.add('speaking');
         startRings();
-        const audioSrc = node.audio || (!_muted && window.ELEVEN_KEY ? await elevenLabsTTS(node.text) : null);
+        const audioSrc = node.audio || (!_muted && window.ELEVEN_KEY ? await elevenLabsTTS(node.text, window.ELEVEN_INTERVIEWER_VOICE_ID || window.ELEVEN_VOICE_ID) : null);
         await Promise.all([
           _muted ? Promise.resolve() : playAudio(audioSrc, true),
           typeLine(node.text),

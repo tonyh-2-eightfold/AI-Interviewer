@@ -1601,8 +1601,9 @@
 
         const wordCount = node.text.trim().split(/\s+/).length;
         const estimatedMs = Math.max(1200, wordCount * 430); // ~140 WPM
+        const userAudioSrc = !_muted && window.ELEVEN_KEY ? await elevenLabsTTS(node.text) : null;
         await Promise.all([
-          _muted ? Promise.resolve() : playAudio(node.audio, false),
+          _muted ? Promise.resolve() : playAudio(userAudioSrc, false),
           new Promise(r => setTimeout(r, estimatedMs)),
         ]);
 
